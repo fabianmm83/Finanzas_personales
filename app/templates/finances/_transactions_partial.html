@@ -1,0 +1,113 @@
+{% if transactions %}
+<div class="row mb-4" id="transactions-container">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3 class="mb-0">
+        <i class="fas fa-list-alt me-2"></i>
+        Transacciones {% if current_filters.category %}en {{ current_filters.category }}{% endif %}
+      </h3>
+      <span class="badge bg-primary">
+        Total: {{ total_transactions }} (Mostrando {{ transactions|length }})
+      </span>
+    </div>
+  </div>
+  
+  {% for t in transactions %}
+    <div class="col-lg-4 col-md-6 mb-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="card-title mb-1">{{ t.category }}</h5>
+              <p class="text-muted small mb-2">
+                <i class="far fa-calendar me-1"></i> {{ t.date }}
+                {% if t.description %}
+                  <br><i class="far fa-comment me-1"></i> {{ t.description|truncate(30) }}
+                {% endif %}
+              </p>
+            </div>
+            <span class="badge bg-{{ 'success' if t.type == 'i' else 'danger' }}">
+              {{ 'Ingreso' if t.type == 'i' else 'Gasto' }}
+            </span>
+          </div>
+          
+          <p class="card-text fs-4 fw-bold mt-2 mb-3 text-{{ 'success' if t.type == 'i' else 'danger' }}">
+            ${{ "%.2f"|format(t.amount) }}
+          </p>
+          
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('transactions.edit_transaction', transaction_id=t.id) }}" 
+               class="btn btn-sm btn-outline-warning">
+              <i class="fas fa-edit"></i> Editar
+            </a>
+            
+            <form action="{{ url_for('transactions.delete_transaction', transaction_id=t.id) }}" 
+                  method="POST" 
+                  onsubmit="return confirm('¿Eliminar esta transacción?');">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-trash-alt"></i> Eliminar
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  
+  {% if pagination.pages > 1 %}
+    <div class="col-12 mt-4">
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+          {% if pagination.has_prev %}
+            <li class="page-item">
+              <a class="page-link pagination-link" 
+                 href="#" 
+                 data-page="{{ pagination.prev_num }}">
+                &laquo; Anterior
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">&laquo; Anterior</span>
+            </li>
+          {% endif %}
+          
+          {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=3) %}
+            {% if page_num %}
+              <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                <a class="page-link pagination-link" 
+                   href="#" 
+                   data-page="{{ page_num }}">
+                  {{ page_num }}
+                </a>
+              </li>
+            {% else %}
+              <li class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+            {% endif %}
+          {% endfor %}
+          
+          {% if pagination.has_next %}
+            <li class="page-item">
+              <a class="page-link pagination-link" 
+                 href="#" 
+                 data-page="{{ pagination.next_num }}">
+                Siguiente &raquo;
+              </a>
+            </li>
+          {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">Siguiente &raquo;</span>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% else %}
+<div class="alert alert-info text-center">
+  <i class="fas fa-info-circle"></i> No se encontraron transacciones con los filtros aplicados.
+</div>
+{% endif %}

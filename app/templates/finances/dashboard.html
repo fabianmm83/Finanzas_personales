@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1 class="text-center">
+    Movimientos de {{ datetime(selected_year, selected_month, 1).strftime('%B %Y') }}
+  </h1>
+  <p class="text-center text-muted mb-4">
+    <i class="far fa-calendar-alt me-1"></i> 
+    Del {{ start_date.strftime('%d/%m/%Y') }} al {{ end_date.strftime('%d/%m/%Y') }}
+  </p>
+
+  <!-- Botones principales -->
+  <div class="text-center mb-4">
+    <a href="{{ url_for('budgets.add_budget') }}" class="btn btn-primary">
+      <i class="fas fa-plus-circle"></i> Agregar Presupuesto
+    </a>
+    <a href="{{ url_for('budgets.view_budgets') }}" class="btn btn-info">
+      <i class="fas fa-chart-pie"></i> Ver Mis Presupuestos
+    </a>
+    <a href="{{ url_for('transactions.add_transaction') }}" class="btn btn-success">
+      <i class="fas fa-plus"></i> Nueva Transacción
+    </a>
+  </div>
+
+  <!-- Carrusel de meses -->
+  <div class="row justify-content-center mb-4">
+    <div class="col-md-10">
+      <div class="card shadow">
+        <div class="card-body">
+          <div id="monthsCarousel" class="carousel slide" data-bs-ride="false">
+            <div class="carousel-inner">
+              {% for month_data in available_months %}
+                <div class="carousel-item {% if month_data.month == selected_month and month_data.year == selected_year %}active{% endif %}">
+                  <div class="text-center">
+                    <h5>{{ month_data.name }}</h5>
+                    <div class="row">
+                      <div class="col-md-4">
+                        <p class="mb-1"><strong>Ingresos:</strong></p>
+                        <p class="text-success">${{ "%.2f"|format(month_data.income) }}</p>
+                      </div>
+                      <div class="col-md-4">
+                        <p class="mb-1"><strong>Gastos:</strong></p>
+                        <p class="text-danger">${{ "%.2f"|format(month_data.expense) }}</p>
+                      </div>
+                      <div class="col-md-4">
+                        <p class="mb-1"><strong>Balance:</strong></p>
+                        <p class="{{ 'text-success' if month_data.balance >= 0 else 'text-danger' }}">
+                          ${{ "%.2f"|format(month_data.balance) }}
+                        </p>
+                      </div>
+                    </div>
+                    <a href="{{ url_for('transactions.dashboard', month=month_data.month, year=month_data.year) }}" 
+                       class="btn btn-sm btn-primary mt-2">
+                      Ver Detalles
+                    </a>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#monthsCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Anterior</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#monthsCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Siguiente</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros Avanzados -->
+  <div class="row justify-content-center mb-4">
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filtros Avanzados</h5>
+          <form method="get" action="{{ url_for('transactions.dashboard') }}" class="row g-3">
+            <input type="hidden" name="month" value="{{ selected_month }}">
+            <input type="hidden" name="year" value="{{ selected_year }}">
+            
+            <div class="col-md-4">
+              <label for="category" class="form-label">Categoría</label>
+              <select class="form-select" id="category" name="category">
+                <option value="">Todas las categorías</option>
+                {% for cat in categories %}
+                  <option value="{{ cat }}" {% if current_filters.category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="col-md-3">
+              <label for="amount_min" class="form-label">Mínimo ($)</label>
+              <input type="number" class="form-control" id="amount_min" name="amount_min" 
+                     value="{{ current_filters.amount_min or '' }}" step="0.01" min="0" placeholder="Mínimo">
+            </div>
+            
+            <div class="col-md-3">
+              <label for="amount_max" class="form-label">Máximo ($)</label>
+              <input type="number" class="form-control" id="amount_max" name="amount_max" 
+                     value="{{ current_filters.amount_max or '' }}" step="0.01" min="0" placeholder="Máximo">
+            </div>
+            
+            <div class="col-md-2 d-flex align-items-end">
+              <button type="submit" class="btn btn-primary me-2 w-100">
+                <i class="fas fa-search"></i> Filtrar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen Financiero Mejorado -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-success text-white h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">Total Ingresos</h5>
+          <p class="card-text h4">${{ "%.2f"|format(total_income|default(0)) }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-danger text-white h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">Total Gastos</h5>
+          <p class="card-text h4">${{ "%.2f"|format(total_expense|default(0)) }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card {{ 'bg-primary' if balance_total >= 0 else 'bg-warning' }} text-white h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">Balance</h5>
+          <p class="card-text h4">${{ "%.2f"|format(balance_total|default(0)) }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card bg-info text-white h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">Ahorro Ideal</h5>
+          <p class="card-text h4">${{ "%.2f"|format(ahorro_potencial|default(0)) }}</p>
+          <small class="text-white-50">(20% de ingresos)</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="card bg-secondary text-white h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title">Gasto Diario</h5>
+          <p class="card-text h4">${{ "%.2f"|format(gasto_diario_promedio|default(0)) }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráfico de Evolución Temporal -->
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card shadow">
+        <div class="card-body">
+          <h2 class="text-center card-title mb-4">
+            Evolución de Ingresos y Gastos
+            <small class="text-muted d-block">Del {{ start_date.strftime('%d/%m/%Y') }} al {{ end_date.strftime('%d/%m/%Y') }}</small>
+          </h2>
+          <canvas id="timelineChart" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sección de transacciones (se actualiza via AJAX) -->
+  <div id="transactions-section">
+    {% include 'finances/_transactions_partial.html' %}
+  </div>
+
+  <!-- Gráficos de Categorías -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-body">
+          <h2 class="text-center card-title">
+            Distribución de Ingresos
+          </h2>
+          <canvas id="incomeChart" height="250"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow">
+        <div class="card-body">
+          <h2 class="text-center card-title">
+            Distribución de Gastos
+          </h2>
+          <canvas id="expenseChart" height="250"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts de gráficos -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Gráfico de Evolución Temporal
+    var timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    var timelineChart = new Chart(timelineCtx, {
+      type: 'line',
+      data: {{ timeline_chart_data | safe }},
+      options: {
+        responsive: true,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toFixed(2);
+              }
+            }
+          }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': $' + context.raw.toFixed(2);
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Gráfico de Ingresos (barras)
+    var incomeCtx = document.getElementById('incomeChart').getContext('2d');
+    var incomeChart = new Chart(incomeCtx, {
+      type: 'bar',
+      data: {{ income_chart_data | safe }},
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toFixed(2);
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return '$' + context.raw.toFixed(2);
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Gráfico de Gastos (barras)
+    var expenseCtx = document.getElementById('expenseChart').getContext('2d');
+    var expenseChart = new Chart(expenseCtx, {
+      type: 'bar',
+      data: {{ expense_chart_data | safe }},
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toFixed(2);
+              }
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return '$' + context.raw.toFixed(2);
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Paginación AJAX
+    $(document).ready(function() {
+      // Manejar clic en los enlaces de paginación
+      $(document).on('click', '.pagination-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        loadTransactions(page);
+      });
+
+      // Función para cargar transacciones via AJAX
+      function loadTransactions(page) {
+        // Obtener todos los parámetros de filtro
+        const params = {
+          month: '{{ selected_month }}',
+          year: '{{ selected_year }}',
+          category: '{{ current_filters.category or '' }}',
+          amount_min: '{{ current_filters.amount_min or '' }}',
+          amount_max: '{{ current_filters.amount_max or '' }}',
+          page: page
+        };
+
+        // Mostrar spinner de carga
+        $('#transactions-section').html('<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-3x"></i></div>');
+
+        // Hacer la petición AJAX
+        $.ajax({
+          url: '{{ url_for("transactions.dashboard") }}',
+          data: params,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          success: function(response) {
+            $('#transactions-section').html(response.html);
+            // Actualizar la URL en el navegador sin recargar
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('page', response.page);
+            history.pushState(null, null, newUrl.toString());
+          },
+          error: function(xhr) {
+            $('#transactions-section').html('<div class="alert alert-danger">Error al cargar transacciones</div>');
+          }
+        });
+      }
+    });
+  </script>
+</div>
+{% endblock %}

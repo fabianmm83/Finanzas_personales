@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container mt-5">
+    <h1 class="text-center">Editar Transacción</h1>
+
+    <form method="POST" action="{{ url_for('transactions.edit_transaction', transaction_id=transaction.id) }}">
+      <div class="form-group">
+        <label for="type">Tipo de Transacción:</label>
+        <select id="type" name="type" class="form-control" required>
+          <option value="i" {% if transaction.type == 'i' %}selected{% endif %}>Ingreso</option>
+          <option value="g" {% if transaction.type == 'g' %}selected{% endif %}>Gasto</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="category">Categoría:</label>
+        <input type="text" id="category" name="category" class="form-control" value="{{ transaction.category }}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Monto:</label>
+        <input type="number" id="amount" name="amount" class="form-control" value="{{ transaction.amount }}" step="0.01" required>
+      </div>
+
+      <div class="form-group">
+        <label for="date">Fecha:</label>
+        <input type="date" id="date" name="date" class="form-control" value="{{ transaction.date }}">
+      </div>
+
+      <button type="submit" class="btn btn-primary">Actualizar Transacción</button>
+    </form>
+  </div>
+{% endblock %}

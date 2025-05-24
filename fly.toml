@@ -1,0 +1,15 @@
+app = "finanzas-personales"
+primary_region = "mad"
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+  builtin = "python"  # ¡Forzar el buildpack de Python!
+
+[env]
+  PORT = "8080"
+  FLASK_APP = "run.py"
+  FLASK_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true

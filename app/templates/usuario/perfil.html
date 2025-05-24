@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Nueva fila para el perfil y la rueda -->
+    <div class="row">
+        <!-- Columna del perfil -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-circle fa-5x mb-3 text-primary"></i>
+                    <h2>{{ current_user.username }}</h2>
+                    <p class="text-muted">
+        Miembro desde: 
+        {% if current_user.date_created %}
+            {{ current_user.date_created.strftime('%B %Y') }}
+        {% else %}
+            No disponible
+        {% endif %}
+    </p>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5>Total Ahorrado</h5>
+                           <p class="text-success">$<span id="totalSavings">{{ "%.2f"|format(total_savings) }}</span></p>
+                        </div>
+                        <div class="col-6">
+                            <h5>Transacciones</h5>
+                           <p class="text-primary"><span id="totalTransactions">{{ total_transactions }}</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna de la rueda de la vida -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">Mi Rueda de la Vida</h3>
+                    <canvas id="lifeWheel" width="400" height="400"></canvas>
+                    
+                    <div class="mt-4">
+                        <h4>Ajusta tus valores:</h4>
+                        <div class="row" id="sliderContainer">
+                            <!-- Los sliders se generarán dinámicamente -->
+                        </div>
+                        <!-- Botones de guardar/cargar -->
+                        <div class="text-center mt-4">
+                            <button class="btn btn-primary me-2" onclick="saveProgress()">
+                                <i class="fas fa-save"></i> Guardar Progreso
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadProgress()">
+                                <i class="fas fa-undo"></i> Cargar Último Guardado
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Agregar Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+const areas = [
+    'Salud',
+    'Hogar',
+    'Familia',
+    'Trabajo',
+    'Amor',
+    'Espiritualidad',
+    'Desarrollo Personal',
+    'Amigos',
+    'Ocio'
+];
+
+// Generar sliders
+const sliderContainer = document.getElementById('sliderContainer');
+areas.forEach((area, index) => {
+    const col = document.createElement('div');
+    col.className = 'col-md-4 mb-3';
+    col.innerHTML = `
+        <label for="slider${index}">${area}</label>
+        <input type="range" class="form-range" id="slider${index}" 
+               min="0" max="10" value="5" 
+               oninput="updateChart(this.id, this.value)">
+        <span id="value${index}">5</span>/10
+    `;
+    sliderContainer.appendChild(col);
+});
+
+// Configurar el gráfico
+const ctx = document.getElementById('lifeWheel').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+        labels: areas,
+        datasets: [{
+            label: 'Mi Rueda de la Vida',
+            data: Array(areas.length).fill(5),
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        scales: {
+            r: {
+                min: 0,
+                max: 10,
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 2,
+                    font: {
+                        size: 14
+                    }
+                },
+                pointLabels: {
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        maintainAspectRatio: true
+    }
+});
+
+function updateChart(sliderId, value) {
+    const index = parseInt(sliderId.replace('slider', ''));
+    document.getElementById(`value${index}`).textContent = value;
+    chart.data.datasets[0].data[index] = parseInt(value);
+    chart.update();
+    // Guardar automáticamente después de cada actualización
+    saveProgress();
+}
+
+function saveProgress() {
+    const values = chart.data.datasets[0].data;
+    localStorage.setItem('wheelValues', JSON.stringify(values));
+    showToast('Progreso guardado correctamente');
+}
+
+function loadProgress() {
+    const savedValues = localStorage.getItem('wheelValues');
+    if (savedValues) {
+        const values = JSON.parse(savedValues);
+        chart.data.datasets[0].data = values;
+        
+        // Actualizar los sliders
+        values.forEach((value, index) => {
+            const slider = document.getElementById(`slider${index}`);
+            if (slider) {
+                slider.value = value;
+                document.getElementById(`value${index}`).textContent = value;
+            }
+        });
+        
+        chart.update();
+        showToast('Progreso cargado correctamente');
+    }
+}
+
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Cargar progreso automáticamente al iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    loadProgress();
+});
+
+
+</script>
+
+<style>
+    #lifeWheel {
+        display: block;
+        margin: 0 auto;
+        max-width: 100%;
+    }
+    
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    
+    }
+
+.form-range::-webkit-slider-thumb {
+        background: var(--primary-color);
+    }
+    
+    .form-range::-moz-range-thumb {
+        background: var(--primary-color);
+    }
+    
+    .slider-container {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
+    
+    .slider-label {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 5px;
+    }
+    
+    .value-display {
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--dark-color);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease-out;
+    z-index: 1000;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1 class="text-center">Presupuestos para {{ month }}-{{ year }}</h1>
+  
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Categoría</th>
+        <th>Límite</th>
+        <th>Gastado</th>
+        <th>Restante</th>
+        <th>Progreso</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for budget in budgets %}
+        <tr>
+          <td contenteditable="true" id="category-{{ budget.id }}">{{ budget.category }}</td>
+          <td contenteditable="true" id="limit-{{ budget.id }}">${{ "%.2f"|format(budget.limit) }}</td>
+          <td>${{ "%.2f"|format(budget.spent) }}</td>
+          <td class="{{ 'text-danger' if budget.remaining < 0 else 'text-success' }}">
+            ${{ "%.2f"|format(budget.remaining) }}
+          </td>
+          <td>
+            <div class="progress">
+              <div class="progress-bar {{ 'bg-danger' if budget.percentage_used > 100 else 'bg-success' }}" 
+                   style="width: {{ budget.percentage_used }}%">
+                {{ "%.1f"|format(budget.percentage_used) }}%
+              </div>
+            </div>
+          </td>
+          <td>
+            <button class="btn btn-primary btn-sm mr-2" onclick="editBudget({{ budget.id }})">Guardar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteBudget({{ budget.id }})">Eliminar</button>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="6" class="text-center">No hay presupuestos para este período</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function editBudget(budgetId) {
+    const category = document.getElementById(`category-${budgetId}`).innerText;
+    const limitText = document.getElementById(`limit-${budgetId}`).innerText;
+    const limit = parseFloat(limitText.replace('$', ''));
+
+    if (isNaN(limit)) {
+        alert('Por favor ingrese un valor numérico válido para el límite');
+        return;
+    }
+
+    fetch(`/api/budgets/edit/${budgetId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            category: category,
+            limit: limit
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        location.reload();
+    })
+    .catch(error => console.error("Error:", error));
+}
+
+function deleteBudget(budgetId) {
+    if (!confirm("¿Seguro que deseas eliminar este presupuesto?")) return;
+
+    fetch(`/api/budgets/delete/${budgetId}`, {
+        method: "DELETE"
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        location.reload();
+    })
+    .catch(error => console.error("Error:", error));
+}
+</script>
+
+{% endblock %}

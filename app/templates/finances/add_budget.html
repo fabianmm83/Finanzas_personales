@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1 class="text-center mb-4">Agregar Presupuesto</h1>
+
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <form id="budget-form" method="POST" class="border p-4 rounded-3 shadow-sm bg-white">
+        
+        <!-- Campo Categoría -->
+        <div class="mb-3">
+          <label for="category" class="form-label fw-bold">Categoría</label>
+          <input type="text" class="form-control" id="category" name="category" required
+                 value="{{ category }}">
+        </div>
+
+        <!-- Campo Límite -->
+        <div class="mb-3">
+          <label for="limit" class="form-label fw-bold">Límite ($)</label>
+          <input type="number" step="0.01" min="0" class="form-control" id="limit" name="limit" required
+                 value="{{ limit }}">
+        </div>
+
+        <!-- Campos Fecha - Versión Simplificada -->
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="month" class="form-label fw-bold">Mes</label>
+            <select class="form-select" id="month" name="month" required>
+              {% for i in range(1, 13) %}
+                <option value="{{ i }}" {% if i == month|int %}selected{% endif %}>
+                  {{ ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][i-1] }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+
+          <div class="col-md-6">
+            <label for="year" class="form-label fw-bold">Año</label>
+            <input type="number" class="form-control" id="year" name="year" 
+                   min="{{ current_year }}" max="{{ current_year + 5 }}"
+                   value="{{ year }}" required>
+          </div>
+
+        <div class="d-grid mt-4">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save me-2"></i>Guardar Presupuesto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Debug: Verificar que los selects existen y tienen opciones
+  const debugSelect = (id) => {
+    const el = document.getElementById(id);
+    if (!el) {
+      console.error(`Elemento ${id} no encontrado`);
+      return;
+    }
+    console.log(`${id}:`, el);
+    console.log(`Opciones de ${id}:`, el.options);
+    console.log(`Valor seleccionado en ${id}:`, el.value);
+    console.log(`Estilos computados de ${id}:`, window.getComputedStyle(el));
+  };
+
+  debugSelect('month');
+  debugSelect('year');
+
+  // Manejo del formulario
+  document.getElementById('budget-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+      category: document.getElementById('category').value,
+      limit: parseFloat(document.getElementById('limit').value),
+      month: parseInt(document.getElementById('month').value),
+      year: parseInt(document.getElementById('year').value),
+      user_id: {{ current_user.id }}
+    };
+
+    try {
+      const response = await fetch("{{ url_for('budgets.create_budget') }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if(data.success) {
+        window.location.href = "{{ url_for('budgets.view_budgets') }}?month=" + formData.month + "&year=" + formData.year;
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo guardar el presupuesto'));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión. Por favor intenta nuevamente.');
+    }
+  });
+});
+</script>
+
+<div class="select-debug d-none">
+  <h5>Debug de Selects</h5>
+  <div id="debug-info"></div>
+</div>
+
+{% endblock %}
