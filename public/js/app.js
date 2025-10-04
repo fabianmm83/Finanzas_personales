@@ -146,6 +146,9 @@ function updateNavbar(user) {
     }
 }
 
+
+
+
 function loadLoginPage() {
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -154,7 +157,7 @@ function loadLoginPage() {
                 <div class="card shadow">
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
-                            <i class="fas fa-wallet fa-3x text-primary mb-3"></i>
+                            <img src="/static/logo_torotech1.webp" alt="Logo ToroTech" class="login-logo" onerror="this.style.display='none'">
                             <h3 class="card-title">Finanzas Personales</h3>
                             <p class="text-muted">Controla tus gastos e ingresos</p>
                         </div>
@@ -208,7 +211,13 @@ function loadLoginPage() {
         const password = document.getElementById('login-password').value;
         loginWithEmail(email, password);
     });
+
+    // Manejar el logo del login
+    handleLoginLogo();
 }
+
+
+
 
 function showRegisterPage() {
     const content = document.getElementById('content');
@@ -218,7 +227,7 @@ function showRegisterPage() {
                 <div class="card shadow">
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
-                            <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                            <img src="/static/logo_torotech1.webp" alt="Logo ToroTech" class="login-logo" onerror="this.style.display='none'">
                             <h3 class="card-title">Crear Cuenta</h3>
                             <p class="text-muted">Regístrate para comenzar</p>
                         </div>
@@ -261,7 +270,31 @@ function showRegisterPage() {
         const password = document.getElementById('register-password').value;
         registerWithEmail(email, password, username);
     });
+
+    // Manejar el logo del registro
+    handleLoginLogo();
 }
+
+// Función para manejar logos en páginas de login/registro
+function handleLoginLogo() {
+    const loginLogos = document.querySelectorAll('.login-logo');
+    loginLogos.forEach(logo => {
+        logo.onerror = function() {
+            console.log('❌ Logo no encontrado para login');
+            this.style.display = 'none';
+            // Mostrar ícono de respaldo
+            const parent = this.parentElement;
+            const backupIcon = document.createElement('i');
+            backupIcon.className = 'fas fa-wallet fa-3x text-primary mb-3';
+            parent.appendChild(backupIcon);
+        };
+        logo.onload = function() {
+            console.log('✅ Logo de login cargado correctamente');
+            this.style.display = 'block';
+        };
+    });
+}
+
 
 function loadDashboard(user) {
     const content = document.getElementById('content');
@@ -650,12 +683,18 @@ function updateTransactionsList(transactions) {
     transactionsList.innerHTML = transactionsHTML;
 }
 
+
+
+
+
+
 // FUNCIÓN MEJORADA: Generar gráficos con selector de timeframe
-function generateCharts(dashboardData, timeframe = 'week') {
+// FUNCIÓN MEJORADA: Generar gráficos con selector de timeframe y tipo de gráfica
+function generateCharts(dashboardData, timeframe = 'week', chartType = 'doughnut') {
     // Destruir gráficos existentes
     destroyCharts();
     
-    // Gráfico de Evolución Temporal MEJORADO
+    // Gráfico de Evolución Temporal
     const timelineCtx = document.getElementById('timelineChart');
     if (timelineCtx) {
         let timelineData;
@@ -702,51 +741,25 @@ function generateCharts(dashboardData, timeframe = 'week') {
         });
     }
     
-    // Gráfico de Ingresos por categoría (Doughnut)
+    // Gráfico de Ingresos por categoría con selector de tipo
     const incomeCtx = document.getElementById('incomeChart');
     if (incomeCtx) {
         const incomeCategories = Object.keys(dashboardData.categories.income || {});
         const incomeAmounts = Object.values(dashboardData.categories.income || {});
         
         if (incomeCategories.length > 0) {
-            chartInstances.income = new Chart(incomeCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: incomeCategories,
-                    datasets: [{
-                        data: incomeAmounts,
-                        backgroundColor: [
-                            '#28a745', '#20c997', '#17a2b8', '#6f42c1', 
-                            '#e83e8c', '#fd7e14', '#ffc107', '#28a745'
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                usePointStyle: true
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${label}: $${value.toFixed(2)} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+            // Crear contenedor para el selector de tipo de gráfica
+            const incomeContainer = incomeCtx.closest('.card-body');
+            addChartTypeSelector(incomeContainer, 'income', chartType);
+            
+            chartInstances.income = createCategoryChart(
+                incomeCtx, 
+                incomeCategories, 
+                incomeAmounts, 
+                'Ingresos', 
+                chartType,
+                ['#28a745', '#20c997', '#17a2b8', '#6f42c1', '#e83e8c', '#fd7e14', '#ffc107']
+            );
         } else {
             incomeCtx.parentElement.innerHTML = `
                 <div class="text-center py-4">
@@ -757,51 +770,25 @@ function generateCharts(dashboardData, timeframe = 'week') {
         }
     }
     
-    // Gráfico de Gastos por categoría (Doughnut)
+    // Gráfico de Gastos por categoría con selector de tipo
     const expenseCtx = document.getElementById('expenseChart');
     if (expenseCtx) {
         const expenseCategories = Object.keys(dashboardData.categories.expense || {});
         const expenseAmounts = Object.values(dashboardData.categories.expense || {});
         
         if (expenseCategories.length > 0) {
-            chartInstances.expense = new Chart(expenseCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: expenseCategories,
-                    datasets: [{
-                        data: expenseAmounts,
-                        backgroundColor: [
-                            '#dc3545', '#fd7e14', '#ffc107', '#6610f2',
-                            '#e83e8c', '#6f42c1', '#fd7e14', '#dc3545'
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                usePointStyle: true
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${label}: $${value.toFixed(2)} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+            // Crear contenedor para el selector de tipo de gráfica
+            const expenseContainer = expenseCtx.closest('.card-body');
+            addChartTypeSelector(expenseContainer, 'expense', chartType);
+            
+            chartInstances.expense = createCategoryChart(
+                expenseCtx, 
+                expenseCategories, 
+                expenseAmounts, 
+                'Gastos', 
+                chartType,
+                ['#dc3545', '#fd7e14', '#ffc107', '#6610f2', '#e83e8c', '#6f42c1', '#fd7e14']
+            );
         } else {
             expenseCtx.parentElement.innerHTML = `
                 <div class="text-center py-4">
@@ -812,6 +799,165 @@ function generateCharts(dashboardData, timeframe = 'week') {
         }
     }
 }
+
+// NUEVA FUNCIÓN: Crear selector de tipo de gráfica
+function addChartTypeSelector(container, chartId, currentType) {
+    // Verificar si ya existe el selector
+    let selectorContainer = container.querySelector('.chart-type-selector');
+    
+    if (!selectorContainer) {
+        selectorContainer = document.createElement('div');
+        selectorContainer.className = 'chart-type-selector text-center mb-3';
+        
+        const selectorHTML = `
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="chart-type-${chartId}" id="doughnut-${chartId}" value="doughnut" ${currentType === 'doughnut' ? 'checked' : ''}>
+                <label class="btn btn-outline-primary" for="doughnut-${chartId}" title="Gráfica de Pastel">
+                    <i class="fas fa-chart-pie"></i>
+                </label>
+                
+                <input type="radio" class="btn-check" name="chart-type-${chartId}" id="bar-${chartId}" value="bar" ${currentType === 'bar' ? 'checked' : ''}>
+                <label class="btn btn-outline-primary" for="bar-${chartId}" title="Gráfica de Barras">
+                    <i class="fas fa-chart-bar"></i>
+                </label>
+            </div>
+        `;
+        
+        selectorContainer.innerHTML = selectorHTML;
+        
+        // Insertar después del título
+        const title = container.querySelector('h2');
+        title.parentNode.insertBefore(selectorContainer, title.nextSibling);
+        
+        // Agregar event listeners
+        document.getElementById(`doughnut-${chartId}`).addEventListener('change', function() {
+            if (this.checked) {
+                reloadDashboardWithChartType('doughnut');
+            }
+        });
+        
+        document.getElementById(`bar-${chartId}`).addEventListener('change', function() {
+            if (this.checked) {
+                reloadDashboardWithChartType('bar');
+            }
+        });
+    }
+}
+
+// NUEVA FUNCIÓN: Crear gráfica de categorías según el tipo
+function createCategoryChart(ctx, categories, amounts, label, chartType, colors) {
+    const isBarChart = chartType === 'bar';
+    
+    const data = {
+        labels: categories,
+        datasets: [{
+            label: label,
+            data: amounts,
+            backgroundColor: colors,
+            borderColor: isBarChart ? colors.map(color => color.replace('0.8', '1')) : '#fff',
+            borderWidth: isBarChart ? 1 : 2
+        }]
+    };
+    
+    const options = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: isBarChart ? 'top' : 'bottom',
+                labels: {
+                    padding: 15,
+                    usePointStyle: !isBarChart
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = Math.round((value / total) * 100);
+                        return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+                    }
+                }
+            }
+        }
+    };
+    
+    // Configuraciones específicas para gráficas de barras
+    if (isBarChart) {
+        options.scales = {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toFixed(2);
+                    }
+                }
+            }
+        };
+        options.plugins.legend.display = false;
+    }
+    
+    return new Chart(ctx, {
+        type: chartType,
+        data: data,
+        options: options
+    });
+}
+
+// NUEVA FUNCIÓN: Recargar dashboard con tipo de gráfica seleccionado
+function reloadDashboardWithChartType(chartType) {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
+    loadDashboardData(currentYear, currentMonth, currentTimeframe, chartType);
+}
+
+// MODIFICA la función loadDashboardData para aceptar chartType
+async function loadDashboardData(year, month, timeframe = 'week', chartType = 'doughnut') {
+    showLoading(true);
+    
+    try {
+        // Obtener datos de transacciones
+        const dashboardData = await transactionManager.getDashboardData(month, year);
+        
+        // Actualizar resumen financiero
+        updateFinancialSummary(dashboardData.summary);
+        
+        // Actualizar lista de transacciones con botones de editar/eliminar
+        updateTransactionsList(dashboardData.transactions);
+        
+        // Generar gráficos con el timeframe y chartType seleccionados
+        generateCharts(dashboardData, timeframe, chartType);
+        
+        // Cargar categorías en filtros
+        loadCategoriesFilter(dashboardData.categories);
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showToast('Error al cargar el dashboard', 'danger');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// AGREGAR esta variable global al inicio del archivo
+let currentChartType = 'doughnut'; // 'doughnut' o 'bar'
+
+// MODIFICA reloadDashboardWithChartType
+function reloadDashboardWithChartType(chartType) {
+    currentChartType = chartType;
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
+    loadDashboardData(currentYear, currentMonth, currentTimeframe, chartType);
+}
+
+
+
+
 
 // NUEVA FUNCIÓN: Generar datos diarios para vista semanal
 function generateDailyData(transactions, month, year) {

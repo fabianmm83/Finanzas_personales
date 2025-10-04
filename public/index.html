@@ -80,6 +80,41 @@
             right: 20px;
             z-index: 9999;
         }
+
+        /* Estilos para los selectores de tipo de gráfica */
+        .chart-type-selector {
+            margin-bottom: 1rem;
+        }
+
+        .chart-type-selector .btn-group {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-type-selector .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        /* Mejorar la apariencia de las gráficas */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Asegurar que las gráficas sean responsivas */
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+
+        /* Logo en login */
+        .login-logo {
+            height: 80px;
+            width: auto;
+            margin-bottom: 1rem;
+            object-fit: contain;
+        }
         
         /* Navbar en móviles - botones en línea */
         @media (max-width: 768px) {
@@ -127,6 +162,10 @@
             .logo-img {
                 height: 30px;
             }
+
+            .login-logo {
+                height: 60px;
+            }
         }
         
         /* Logo más pequeño en móviles muy pequeños */
@@ -146,6 +185,10 @@
             
             .navbar-nav .nav-link i {
                 font-size: 0.9rem;
+            }
+
+            .login-logo {
+                height: 50px;
             }
         }
         
@@ -277,17 +320,17 @@
                 };
                 logo.onload = function() {
                     console.log('✅ Logo cargado correctamente');
-                this.style.display = 'block';
-                this.style.height = '40px';
-                this.style.width = 'auto';
-                this.style.objectFit = 'contain';
-                this.style.marginRight = '10px';
-                console.log('Logo dimensions:', this.offsetWidth, 'x', this.offsetHeight);
-                console.log('Logo src:', this.src);
-                console.log('Logo complete:', this.complete);
-                console.log('Logo natural dimensions:', this.naturalWidth, 'x', this.naturalHeight);
-                console.log('Logo current src:', this.currentSrc);
-            };
+                    this.style.display = 'block';
+                    this.style.height = '40px';
+                    this.style.width = 'auto';
+                    this.style.objectFit = 'contain';
+                    this.style.marginRight = '10px';
+                    console.log('Logo dimensions:', this.offsetWidth, 'x', this.offsetHeight);
+                    console.log('Logo src:', this.src);
+                    console.log('Logo complete:', this.complete);
+                    console.log('Logo natural dimensions:', this.naturalWidth, 'x', this.naturalHeight);
+                    console.log('Logo current src:', this.currentSrc);
+                };
                 
                 // Forzar la carga si es necesario
                 if (logo.complete) {
@@ -347,6 +390,40 @@
         // Ejecutar debug después de que todo cargue
         window.addEventListener('load', function() {
             setTimeout(debugLayout, 1000);
+        });
+
+        // Función para manejar logos en páginas de login/registro
+        function handleLoginLogo() {
+            const loginLogos = document.querySelectorAll('.login-logo');
+            loginLogos.forEach(logo => {
+                logo.onerror = function() {
+                    console.log('❌ Logo no encontrado para login');
+                    this.style.display = 'none';
+                    // Mostrar ícono de respaldo
+                    const parent = this.parentElement;
+                    const backupIcon = document.createElement('i');
+                    backupIcon.className = 'fas fa-wallet fa-3x text-primary mb-3';
+                    parent.appendChild(backupIcon);
+                };
+                logo.onload = function() {
+                    console.log('✅ Logo de login cargado correctamente');
+                    this.style.display = 'block';
+                };
+            });
+        }
+
+        // Ejecutar cuando el contenido cambie (para páginas dinámicas)
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    handleLoginLogo();
+                }
+            });
+        });
+
+        observer.observe(document.getElementById('content'), {
+            childList: true,
+            subtree: true
         });
     </script>
 </body>
