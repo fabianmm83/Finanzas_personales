@@ -37,7 +37,7 @@ function loadLoginPage() {
     const content = document.getElementById('content');
     content.innerHTML = `
         <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-5">
                 <div class="card shadow">
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
@@ -46,24 +46,115 @@ function loadLoginPage() {
                             <p class="text-muted">Controla tus gastos e ingresos</p>
                         </div>
                         
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary btn-lg" onclick="loginWithGoogle()">
+                        <!-- Formulario de Login con Email -->
+                        <div class="mb-4">
+                            <h5 class="text-center mb-3">Iniciar Sesión con Email</h5>
+                            <form id="email-login-form">
+                                <div class="mb-3">
+                                    <label for="login-email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="login-email" placeholder="tu@email.com" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="login-password" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="login-password" placeholder="Tu contraseña" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 mb-3">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="text-center mb-3">
+                            <span class="text-muted">O</span>
+                        </div>
+                        
+                        <!-- Botón de Google -->
+                        <div class="d-grid gap-2 mb-4">
+                            <button class="btn btn-outline-primary" onclick="loginWithGoogle()">
                                 <i class="fab fa-google me-2"></i> Continuar con Google
                             </button>
                         </div>
                         
-                        <div class="text-center mt-4">
-                            <small class="text-muted">
-                                <i class="fas fa-lock me-1"></i>
-                                Tus datos están protegidos
-                            </small>
+                        <!-- Enlace a Registro -->
+                        <div class="text-center">
+                            <p class="mb-0">
+                                ¿No tienes cuenta? 
+                                <a href="#" onclick="showRegisterPage()" class="text-decoration-none">Regístrate aquí</a>
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     `;
+
+    // Event listener para el formulario de login con email
+    document.getElementById('email-login-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        loginWithEmail(email, password);
+    });
 }
+
+// Nueva función para mostrar página de registro
+function showRegisterPage() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                            <h3 class="card-title">Crear Cuenta</h3>
+                            <p class="text-muted">Regístrate para comenzar</p>
+                        </div>
+                        
+                        <form id="register-form">
+                            <div class="mb-3">
+                                <label for="register-username" class="form-label">Nombre de Usuario</label>
+                                <input type="text" class="form-control" id="register-username" placeholder="Tu nombre de usuario" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="register-email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="register-email" placeholder="tu@email.com" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="register-password" class="form-label">Contraseña</label>
+                                <input type="password" class="form-control" id="register-password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mb-3">
+                                <i class="fas fa-user-plus me-2"></i>Crear Cuenta
+                            </button>
+                        </form>
+                        
+                        <div class="text-center">
+                            <p class="mb-0">
+                                ¿Ya tienes cuenta? 
+                                <a href="#" onclick="loadLoginPage()" class="text-decoration-none">Inicia Sesión</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Event listener para el formulario de registro
+    document.getElementById('register-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = document.getElementById('register-username').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        registerWithEmail(email, password, username);
+    });
+}
+
+
+
+
+
 
 function loadDashboard(user) {
     const content = document.getElementById('content');
