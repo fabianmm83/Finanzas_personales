@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finanzas Personales</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="description" content="Aplicación de Finanzas Personales - Controla tus gastos e ingresos">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/logo_torotech1.webp">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -108,11 +116,12 @@
             height: auto !important;
         }
 
-        /* Logo en login */
+        /* Logo en login - CENTRADO */
         .login-logo {
             height: 80px;
             width: auto;
-            margin-bottom: 1rem;
+            margin: 0 auto 1rem auto; /* Centrado */
+            display: block; /* Para que funcione margin auto */
             object-fit: contain;
         }
         
@@ -325,11 +334,6 @@
                     this.style.width = 'auto';
                     this.style.objectFit = 'contain';
                     this.style.marginRight = '10px';
-                    console.log('Logo dimensions:', this.offsetWidth, 'x', this.offsetHeight);
-                    console.log('Logo src:', this.src);
-                    console.log('Logo complete:', this.complete);
-                    console.log('Logo natural dimensions:', this.naturalWidth, 'x', this.naturalHeight);
-                    console.log('Logo current src:', this.currentSrc);
                 };
                 
                 // Forzar la carga si es necesario
@@ -348,48 +352,6 @@
                 const element = document.getElementById(id);
                 console.log(`Nav element ${id}:`, element ? '✅' : '❌');
             });
-
-            // Verificar la navbar
-            const navbar = document.querySelector('.navbar');
-            console.log('Navbar encontrada:', navbar ? '✅' : '❌');
-            if (navbar) {
-                console.log('Navbar styles:', window.getComputedStyle(navbar));
-            }
-
-            // Debug del logo
-            console.log('🔍 Debug del logo:');
-            console.log('Logo element:', logo);
-            if (logo) {
-                console.log('Logo src:', logo.src);
-                console.log('Logo currentSrc:', logo.currentSrc);
-                console.log('Logo complete:', logo.complete);
-                console.log('Logo natural dimensions:', logo.naturalWidth, 'x', logo.naturalHeight);
-            }
-        });
-
-        // Función auxiliar para debug del CSS
-        function debugLayout() {
-            console.log('=== DEBUG LAYOUT ===');
-            console.log('Window height:', window.innerHeight);
-            console.log('Window width:', window.innerWidth);
-            console.log('Body padding-top:', document.body.style.paddingTop);
-            
-            const navbar = document.querySelector('.navbar');
-            if (navbar) {
-                const rect = navbar.getBoundingClientRect();
-                console.log('Navbar height:', rect.height);
-                console.log('Navbar position:', rect.top, rect.left);
-                console.log('Navbar computed styles:', {
-                    display: window.getComputedStyle(navbar).display,
-                    position: window.getComputedStyle(navbar).position,
-                    background: window.getComputedStyle(navbar).background
-                });
-            }
-        }
-
-        // Ejecutar debug después de que todo cargue
-        window.addEventListener('load', function() {
-            setTimeout(debugLayout, 1000);
         });
 
         // Función para manejar logos en páginas de login/registro
@@ -424,6 +386,30 @@
         observer.observe(document.getElementById('content'), {
             childList: true,
             subtree: true
+        });
+
+        // PWA - Registrar Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registrado: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('Error ServiceWorker: ', error);
+                    });
+            });
+        }
+
+        // Detectar instalación PWA
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('PWA puede instalarse');
+            e.preventDefault();
+            window.deferredPrompt = e;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA instalada');
         });
     </script>
 </body>
