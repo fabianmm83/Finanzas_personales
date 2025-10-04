@@ -407,6 +407,22 @@ function loadDashboard(user) {
     loadDashboardData(currentYear, currentMonth);
 }
 
+// Función para debug de transacciones
+function debugTransactions(transactions) {
+    console.log('🔍 Debug de transacciones:');
+    transactions.forEach((transaction, index) => {
+        console.log(`Transacción ${index}:`, {
+            type: transaction.type,
+            amount: transaction.amount,
+            category: transaction.category,
+            date: transaction.date,
+            dateType: typeof transaction.date,
+            hasToDate: transaction.date && typeof transaction.date.toDate === 'function',
+            hasSeconds: transaction.date && transaction.date.seconds
+        });
+    });
+}
+
 // Nueva función para cargar datos del dashboard
 async function loadDashboardData(year, month) {
     showLoading(true);
@@ -414,6 +430,10 @@ async function loadDashboardData(year, month) {
     try {
         // Obtener datos de transacciones
         const dashboardData = await transactionManager.getDashboardData(month, year);
+        
+        // Debug de transacciones
+        console.log('📊 Datos del dashboard recibidos:', dashboardData);
+        debugTransactions(dashboardData.transactions);
         
         // Actualizar resumen financiero
         updateFinancialSummary(dashboardData.summary);
@@ -496,7 +516,29 @@ function updateFinancialSummary(summary) {
     financialSummary.innerHTML = summaryHTML;
 }
 
-// Función para actualizar lista de transacciones
+// Función para procesar fecha de transacción
+function processTransactionDate(transaction) {
+    try {
+        if (transaction.date && typeof transaction.date.toDate === 'function') {
+            // Si es un Timestamp de Firebase
+            return transaction.date.toDate();
+        } else if (transaction.date && transaction.date.seconds) {
+            // Si es un objeto Timestamp serializado
+            return new Date(transaction.date.seconds * 1000);
+        } else if (transaction.date) {
+            // Si es un string de fecha
+            return new Date(transaction.date);
+        } else {
+            // Fecha por defecto
+            return new Date();
+        }
+    } catch (error) {
+        console.error('Error procesando fecha:', error, transaction);
+        return new Date();
+    }
+}
+
+// Función para actualizar lista de transacciones CORREGIDA
 function updateTransactionsList(transactions) {
     const transactionsList = document.getElementById('transactions-list');
     if (!transactionsList) {
@@ -533,7 +575,8 @@ function updateTransactionsList(transactions) {
     `;
     
     transactions.slice(0, 10).forEach(transaction => {
-        const date = transaction.date.toDate();
+        // CORRECCIÓN: Usar la función de procesamiento de fecha
+        const date = processTransactionDate(transaction);
         const isIncome = transaction.type === 'income';
         
         transactionsHTML += `
@@ -696,14 +739,15 @@ function generateCharts(dashboardData) {
     }
 }
 
-// Función para generar datos semanales
+// Función para generar datos semanales CORREGIDA
 function generateWeeklyData(transactions, month, year) {
     const weeks = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
     const weeklyIncome = [0, 0, 0, 0];
     const weeklyExpense = [0, 0, 0, 0];
     
     transactions.forEach(transaction => {
-        const date = transaction.date.toDate();
+        // CORRECCIÓN: Usar la función de procesamiento de fecha
+        const date = processTransactionDate(transaction);
         const week = Math.floor((date.getDate() - 1) / 7);
         const weekIndex = Math.min(week, 3); // Asegurar que no exceda 3
         
@@ -803,7 +847,6 @@ function applyFilters() {
     showToast('Filtros aplicados: ' + (category || 'Todas categorías'), 'success');
 }
 
-
 // Funciones de navegación y páginas
 function showAllTransactions() {
     const now = new Date();
@@ -851,7 +894,7 @@ function showAllTransactions() {
     loadAllTransactions(currentYear, currentMonth);
 }
 
-// Función para cargar todas las transacciones
+// Función para cargar todas las transacciones CORREGIDA
 async function loadAllTransactions(year, month) {
     try {
         const transactions = await transactionManager.getTransactions({ month, year });
@@ -891,7 +934,8 @@ async function loadAllTransactions(year, month) {
         `;
         
         transactions.forEach(transaction => {
-            const date = transaction.date.toDate();
+            // CORRECCIÓN: Usar la función de procesamiento de fecha
+            const date = processTransactionDate(transaction);
             const isIncome = transaction.type === 'income';
             
             transactionsHTML += `
@@ -1330,56 +1374,6 @@ async function loadProfileStats() {
         console.error('Error loading profile stats:', error);
     }
 }
-
-// Función para cargar carrusel de meses (si la necesitas)
-async function loadMonthsCarousel(year, month) {
-    try {
-        const monthlySummaries = await transactionManager.getMonthlySummaries();
-        const carouselInner = document.getElementById('months-carousel-inner');
-        
-        if (!carouselInner) {
-            console.log('Carrusel de meses no encontrado en el DOM actual');
-            return;
-        }
-
-        let carouselHTML = '';
-        monthlySummaries.forEach((monthData, index) => {
-            carouselHTML += `
-                <div class="carousel-item ${monthData.month === month && monthData.year === year ? 'active' : ''}">
-                    <div class="text-center">
-                        <h5>${monthData.name}</h5>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <p class="mb-1"><strong>Ingresos:</strong></p>
-                                <p class="text-success">$${monthData.income.toFixed(2)}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <p class="mb-1"><strong>Gastos:</strong></p>
-                                <p class="text-danger">$${monthData.expense.toFixed(2)}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <p class="mb-1"><strong>Balance:</strong></p>
-                                <p class="${monthData.balance >= 0 ? 'text-success' : 'text-danger'}">
-                                    $${monthData.balance.toFixed(2)}
-                                </p>
-                            </div>
-                        </div>
-                        <button class="btn btn-sm btn-primary mt-2" onclick="loadDashboardData(${monthData.year}, ${monthData.month})">
-                            Ver Detalles
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        carouselInner.innerHTML = carouselHTML;
-    } catch (error) {
-        console.error('Error loading months carousel:', error);
-    }
-}
-
-
-
 
 // FUNCIONES UTILITARIAS
 function showLoading(show) {
