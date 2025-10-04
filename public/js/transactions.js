@@ -192,51 +192,69 @@ if (typeof TransactionManager === 'undefined') {
             }
         }
 
+        
         async getMonthlySummaries() {
-            try {
-                console.log("📅 Obteniendo resúmenes mensuales");
-                const transactions = await this.getTransactions({});
-                
-                // Agrupar por mes y año
-                const monthlyData = {};
-                transactions.forEach(transaction => {
-                    const date = transaction.date.toDate();
-                    const month = date.getMonth() + 1;
-                    const year = date.getFullYear();
-                    const key = `${year}-${month}`;
-                    
-                    if (!monthlyData[key]) {
-                        monthlyData[key] = {
-                            month,
-                            year,
-                            name: this.getMonthName(month) + ' ' + year,
-                            income: 0,
-                            expense: 0,
-                            balance: 0
-                        };
-                    }
-                    
-                    if (transaction.type === 'income') {
-                        monthlyData[key].income += transaction.amount;
-                    } else {
-                        monthlyData[key].expense += transaction.amount;
-                    }
-                    monthlyData[key].balance = monthlyData[key].income - monthlyData[key].expense;
-                });
+    try {
+        console.log("📅 Obteniendo resúmenes mensuales");
+        const transactions = await this.getTransactions({});
+        
+        console.log("Transacciones para resumen:", transactions);
 
-                const result = Object.values(monthlyData).sort((a, b) => {
-                    if (a.year !== b.year) return b.year - a.year;
-                    return b.month - a.month;
-                });
-
-                console.log("✅ Resúmenes mensuales calculados:", result);
-                return result;
-
-            } catch (error) {
-                console.error('❌ Error en getMonthlySummaries:', error);
-                return [];
+        // Agrupar por mes y año
+        const monthlyData = {};
+        transactions.forEach(transaction => {
+            // CORRECCIÓN: Manejar tanto Timestamp como Date
+            let date;
+            if (transaction.date && typeof transaction.date.toDate === 'function') {
+                // Es un Timestamp de Firestore
+                date = transaction.date.toDate();
+            } else if (transaction.date instanceof Date) {
+                // Ya es un objeto Date (viene de Cloud Functions)
+                date = transaction.date;
+            } else {
+                // Formato desconocido, saltar esta transacción
+                console.warn("Formato de fecha desconocido:", transaction.date);
+                return;
             }
-        }
+            
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+            const key = `${year}-${month}`;
+            
+            if (!monthlyData[key]) {
+                monthlyData[key] = {
+                    month,
+                    year,
+                    name: this.getMonthName(month) + ' ' + year,
+                    income: 0,
+                    expense: 0,
+                    balance: 0
+                };
+            }
+            
+            if (transaction.type === 'income') {
+                monthlyData[key].income += transaction.amount;
+            } else {
+                monthlyData[key].expense += transaction.amount;
+            }
+            monthlyData[key].balance = monthlyData[key].income - monthlyData[key].expense;
+        });
+
+        const result = Object.values(monthlyData).sort((a, b) => {
+            if (a.year !== b.year) return b.year - a.year;
+            return b.month - a.month;
+        });
+
+        console.log("✅ Resúmenes mensuales calculados:", result);
+        return result;
+
+    } catch (error) {
+        console.error('❌ Error en getMonthlySummaries:', error);
+        return [];
+    }
+}
+
+
 
         getMonthName(month) {
             const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
