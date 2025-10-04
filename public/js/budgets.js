@@ -1,4 +1,4 @@
-// budgets.js - Verificar si ya existe la clase
+// budgets.js - Versión con verificaciones de seguridad completas
 if (typeof BudgetManager === 'undefined') {
     class BudgetManager {
         constructor() {
@@ -53,6 +53,26 @@ if (typeof BudgetManager === 'undefined') {
             }
         }
 
+        async getAllUserBudgets() {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) return [];
+
+                const snapshot = await this.db.collection('budgets')
+                    .where('userId', '==', user.uid)
+                    .get();
+
+                return snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+            } catch (error) {
+                console.error('Error getting all budgets:', error);
+                return [];
+            }
+        }
+
         async getBudgetStatus(month, year) {
             try {
                 const [budgets, transactions] = await Promise.all([
@@ -72,7 +92,8 @@ if (typeof BudgetManager === 'undefined') {
                         ...budget,
                         spent,
                         remaining,
-                        percentageUsed: Math.min(percentageUsed, 100)
+                        percentageUsed: Math.min(percentageUsed, 100),
+                        isOverBudget: spent > budget.limit
                     };
                 });
 
@@ -86,33 +107,97 @@ if (typeof BudgetManager === 'undefined') {
 
         async updateBudget(budgetId, updates) {
             try {
-                await this.db.collection('budgets').doc(budgetId).update({
+                const user = firebase.auth().currentUser;
+                if (!user) throw new Error('Usuario no autenticado');
+
+                // VERIFICACIÓN DE SEGURIDAD: Confirmar que el presupuesto pertenece al usuario
+                const budgetDoc = await this.db.collection('budgets').doc(budgetId).get();
+                if (!budgetDoc.exists) {
+                    throw new Error('El presupuesto no existe');
+                }
+                
+                if (budgetDoc.data().userId !== user.uid) {
+                    throw new Error('No tienes permisos para editar este presupuesto');
+                }
+
+                const updateData = {
                     ...updates,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                };
+
+                // Si se actualiza el límite, convertirlo a número
+                if (updateData.limit) {
+                    updateData.limit = parseFloat(updateData.limit);
+                }
+
+                await this.db.collection('budgets').doc(budgetId).update(updateData);
                 
                 showToast('Presupuesto actualizado correctamente', 'success');
                 return { success: true };
                 
             } catch (error) {
-                showToast('Error al actualizar presupuesto', 'danger');
+                showToast('Error al actualizar presupuesto: ' + error.message, 'danger');
                 throw error;
             }
         }
 
         async deleteBudget(budgetId) {
             try {
+                const user = firebase.auth().currentUser;
+                if (!user) throw new Error('Usuario no autenticado');
+
+                // VERIFICACIÓN DE SEGURIDAD: Confirmar que el presupuesto pertenece al usuario
+                const budgetDoc = await this.db.collection('budgets').doc(budgetId).get();
+                if (!budgetDoc.exists) {
+                    throw new Error('El presupuesto no existe');
+                }
+                
+                if (budgetDoc.data().userId !== user.uid) {
+                    throw new Error('No tienes permisos para eliminar este presupuesto');
+                }
+
                 await this.db.collection('budgets').doc(budgetId).delete();
                 showToast('Presupuesto eliminado correctamente', 'success');
                 return { success: true };
             } catch (error) {
-                showToast('Error al eliminar presupuesto', 'danger');
+                showToast('Error al eliminar presupuesto: ' + error.message, 'danger');
                 throw error;
+            }
+        }
+
+        async checkBudgetExists(category, month, year) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) return false;
+
+                const snapshot = await this.db.collection('budgets')
+                    .where('userId', '==', user.uid)
+                    .where('category', '==', category)
+                    .where('month', '==', month)
+                    .where('year', '==', year)
+                    .get();
+
+                return !snapshot.empty;
+                
+            } catch (error) {
+                console.error('Error checking budget existence:', error);
+                return false;
+            }
+        }
+
+        async getBudgetAlerts(month, year) {
+            try {
+                const budgetStatus = await this.getBudgetStatus(month, year);
+                return budgetStatus.filter(budget => budget.isOverBudget || budget.percentageUsed >= 80);
+            } catch (error) {
+                console.error('Error getting budget alerts:', error);
+                return [];
             }
         }
     }
 
     window.budgetManager = new BudgetManager();
+    console.log("💰 BudgetManager inicializado correctamente");
 } else {
-    console.log("BudgetManager ya estaba definido");
+    console.log("ℹ️ BudgetManager ya estaba definido");
 }

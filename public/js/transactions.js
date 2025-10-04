@@ -1,4 +1,4 @@
-// transactions.js - Versión corregida
+// transactions.js - Versión corregida con verificaciones de seguridad
 if (typeof TransactionManager === 'undefined') {
     class TransactionManager {
         constructor() {
@@ -98,118 +98,131 @@ if (typeof TransactionManager === 'undefined') {
             }
         }
 
-
-
-
         processTransactionDate(transaction) {
-    try {
-        if (transaction.date && typeof transaction.date.toDate === 'function') {
-            return transaction.date.toDate();
-        } else if (transaction.date && transaction.date.seconds) {
-            return new Date(transaction.date.seconds * 1000);
-        } else if (transaction.date) {
-            return new Date(transaction.date);
-        } else {
-            return new Date();
+            try {
+                if (transaction.date && typeof transaction.date.toDate === 'function') {
+                    return transaction.date.toDate();
+                } else if (transaction.date && transaction.date.seconds) {
+                    return new Date(transaction.date.seconds * 1000);
+                } else if (transaction.date) {
+                    return new Date(transaction.date);
+                } else {
+                    return new Date();
+                }
+            } catch (error) {
+                console.error('Error procesando fecha:', error, transaction);
+                return new Date();
+            }
         }
-    } catch (error) {
-        console.error('Error procesando fecha:', error, transaction);
-        return new Date();
-    }
-}
-
-
 
         async getTransactionsDirect(filters = {}) {
-    try {
-        const user = firebase.auth().currentUser;
-        if (!user) {
-            console.log("Usuario no autenticado");
-            return [];
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    console.log("Usuario no autenticado");
+                    return [];
+                }
+
+                let query = this.db.collection('transactions')
+                    .where('userId', '==', user.uid);
+
+                // Aplicar filtros
+                if (filters.month && filters.year) {
+                    const startDate = new Date(filters.year, filters.month - 1, 1);
+                    const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
+                    
+                    query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+                                .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+                }
+
+                if (filters.type) {
+                    query = query.where('type', '==', filters.type);
+                }
+
+                if (filters.category) {
+                    query = query.where('category', '==', filters.category);
+                }
+
+                const snapshot = await query.orderBy('date', 'desc').get();
+                const transactions = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        // CORRECCIÓN: Procesar la fecha aquí
+                        date: this.processTransactionDate(data)
+                    };
+                });
+                
+                console.log(`✅ Se encontraron ${transactions.length} transacciones directamente`);
+                return transactions;
+
+            } catch (error) {
+                console.error('❌ Error en método directo:', error);
+                throw error;
+            }
         }
 
-        let query = this.db.collection('transactions')
-            .where('userId', '==', user.uid);
+        async updateTransaction(transactionId, transactionData) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) throw new Error('Usuario no autenticado');
 
-        // Aplicar filtros
-        if (filters.month && filters.year) {
-            const startDate = new Date(filters.year, filters.month - 1, 1);
-            const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
-            
-            query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
-                        .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+                // VERIFICACIÓN DE SEGURIDAD: Confirmar que la transacción pertenece al usuario
+                const transactionDoc = await this.db.collection('transactions').doc(transactionId).get();
+                if (!transactionDoc.exists) {
+                    throw new Error('La transacción no existe');
+                }
+                
+                if (transactionDoc.data().userId !== user.uid) {
+                    throw new Error('No tienes permisos para editar esta transacción');
+                }
+
+                const updates = {
+                    type: transactionData.type,
+                    category: transactionData.category,
+                    amount: parseFloat(transactionData.amount),
+                    date: firebase.firestore.Timestamp.fromDate(new Date(transactionData.date)),
+                    description: transactionData.description || '',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await this.db.collection('transactions').doc(transactionId).update(updates);
+                
+                showToast('Transacción actualizada correctamente', 'success');
+                return { success: true };
+                
+            } catch (error) {
+                console.error('❌ Error al actualizar transacción:', error);
+                showToast('Error al actualizar transacción: ' + error.message, 'danger');
+                throw error;
+            }
         }
 
-        if (filters.type) {
-            query = query.where('type', '==', filters.type);
+        async deleteTransaction(transactionId) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) throw new Error('Usuario no autenticado');
+
+                // VERIFICACIÓN DE SEGURIDAD: Confirmar que la transacción pertenece al usuario
+                const transactionDoc = await this.db.collection('transactions').doc(transactionId).get();
+                if (!transactionDoc.exists) {
+                    throw new Error('La transacción no existe');
+                }
+                
+                if (transactionDoc.data().userId !== user.uid) {
+                    throw new Error('No tienes permisos para eliminar esta transacción');
+                }
+
+                await this.db.collection('transactions').doc(transactionId).delete();
+                showToast('Transacción eliminada correctamente', 'success');
+                return { success: true };
+            } catch (error) {
+                console.error('❌ Error al eliminar transacción:', error);
+                showToast('Error al eliminar transacción: ' + error.message, 'danger');
+                throw error;
+            }
         }
-
-        if (filters.category) {
-            query = query.where('category', '==', filters.category);
-        }
-
-        const snapshot = await query.orderBy('date', 'desc').get();
-        const transactions = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                // CORRECCIÓN: Procesar la fecha aquí
-                date: this.processTransactionDate(data)
-            };
-        });
-        
-        console.log(`✅ Se encontraron ${transactions.length} transacciones directamente`);
-        return transactions;
-
-    } catch (error) {
-        console.error('❌ Error en método directo:', error);
-        throw error;
-    }
-}
-
-
-
-
-async updateTransaction(transactionId, transactionData) {
-    try {
-        const user = firebase.auth().currentUser;
-        if (!user) throw new Error('Usuario no autenticado');
-
-        const updates = {
-            type: transactionData.type,
-            category: transactionData.category,
-            amount: parseFloat(transactionData.amount),
-            date: firebase.firestore.Timestamp.fromDate(new Date(transactionData.date)),
-            description: transactionData.description || '',
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        await this.db.collection('transactions').doc(transactionId).update(updates);
-        
-        showToast('Transacción actualizada correctamente', 'success');
-        return { success: true };
-        
-    } catch (error) {
-        console.error('❌ Error al actualizar transacción:', error);
-        showToast('Error al actualizar transacción: ' + error.message, 'danger');
-        throw error;
-    }
-}
-
-async deleteTransaction(transactionId) {
-    try {
-        await this.db.collection('transactions').doc(transactionId).delete();
-        showToast('Transacción eliminada correctamente', 'success');
-        return { success: true };
-    } catch (error) {
-        console.error('❌ Error al eliminar transacción:', error);
-        showToast('Error al eliminar transacción: ' + error.message, 'danger');
-        throw error;
-    }
-}
-
-
 
         async getDashboardData(month, year) {
             try {
@@ -261,69 +274,66 @@ async deleteTransaction(transactionId) {
             }
         }
 
-        
         async getMonthlySummaries() {
-    try {
-        console.log("📅 Obteniendo resúmenes mensuales");
-        const transactions = await this.getTransactions({});
-        
-        console.log("Transacciones para resumen:", transactions);
+            try {
+                console.log("📅 Obteniendo resúmenes mensuales");
+                const transactions = await this.getTransactions({});
+                
+                console.log("Transacciones para resumen:", transactions);
 
-        // Agrupar por mes y año
-        const monthlyData = {};
-        transactions.forEach(transaction => {
-            // CORRECCIÓN: Manejar tanto Timestamp como Date
-            let date;
-            if (transaction.date && typeof transaction.date.toDate === 'function') {
-                // Es un Timestamp de Firestore
-                date = transaction.date.toDate();
-            } else if (transaction.date instanceof Date) {
-                // Ya es un objeto Date (viene de Cloud Functions)
-                date = transaction.date;
-            } else {
-                // Formato desconocido, saltar esta transacción
-                console.warn("Formato de fecha desconocido:", transaction.date);
-                return;
+                // Agrupar por mes y año
+                const monthlyData = {};
+                transactions.forEach(transaction => {
+                    // CORRECCIÓN: Manejar tanto Timestamp como Date
+                    let date;
+                    if (transaction.date && typeof transaction.date.toDate === 'function') {
+                        // Es un Timestamp de Firestore
+                        date = transaction.date.toDate();
+                    } else if (transaction.date instanceof Date) {
+                        // Ya es un objeto Date (viene de Cloud Functions)
+                        date = transaction.date;
+                    } else {
+                        // Formato desconocido, saltar esta transacción
+                        console.warn("Formato de fecha desconocido:", transaction.date);
+                        return;
+                    }
+                    
+                    const month = date.getMonth() + 1;
+                    const year = date.getFullYear();
+                    const key = `${year}-${month}`;
+                    
+                    if (!monthlyData[key]) {
+                        monthlyData[key] = {
+                            month,
+                            year,
+                            name: this.getMonthName(month) + ' ' + year,
+                            income: 0,
+                            expense: 0,
+                            balance: 0
+                        };
+                    }
+                    
+                    if (transaction.type === 'income') {
+                        monthlyData[key].income += transaction.amount;
+                    } else {
+                        monthlyData[key].expense += transaction.amount;
+                    }
+                    monthlyData[key].balance = monthlyData[key].income - monthlyData[key].expense;
+                });
+
+                const result = Object.values(monthlyData).sort((a, b) => {
+                    if (a.year !== b.year) return b.year - a.year;
+                    return b.month - a.month;
+                });
+
+                console.log("✅ Resúmenes mensuales calculados:", result);
+                return result;
+
+            } catch (error) {
+                console.error('❌ Error en getMonthlySummaries:', error);
+                return [];
             }
-            
-            const month = date.getMonth() + 1;
-            const year = date.getFullYear();
-            const key = `${year}-${month}`;
-            
-            if (!monthlyData[key]) {
-                monthlyData[key] = {
-                    month,
-                    year,
-                    name: this.getMonthName(month) + ' ' + year,
-                    income: 0,
-                    expense: 0,
-                    balance: 0
-                };
-            }
-            
-            if (transaction.type === 'income') {
-                monthlyData[key].income += transaction.amount;
-            } else {
-                monthlyData[key].expense += transaction.amount;
-            }
-            monthlyData[key].balance = monthlyData[key].income - monthlyData[key].expense;
-        });
-
-        const result = Object.values(monthlyData).sort((a, b) => {
-            if (a.year !== b.year) return b.year - a.year;
-            return b.month - a.month;
-        });
-
-        console.log("✅ Resúmenes mensuales calculados:", result);
-        return result;
-
-    } catch (error) {
-        console.error('❌ Error en getMonthlySummaries:', error);
-        return [];
-    }
-}
-
-
+        }
 
         getMonthName(month) {
             const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
