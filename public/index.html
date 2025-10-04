@@ -69,6 +69,20 @@
             right: 20px;
             z-index: 9999;
         }
+
+        /* Estilo de respaldo si la imagen no carga */
+        .logo-fallback {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background-color: #fff;
+            border-radius: 50%;
+            margin-right: 10px;
+            text-align: center;
+            line-height: 40px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
     </style>
 </head>
 <body>
@@ -76,7 +90,12 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <img src="/static/logo_torotech1.png" alt="Logo ToroTech" class="logo-img">
+                <!-- Intenta cargar el logo webp, si falla usa un fallback -->
+                <img src="/static/logo_torotech1.webp" 
+                     alt="Logo ToroTech" 
+                     class="logo-img"
+                     onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='inline-block';">
+                <span id="logo-fallback" class="logo-fallback" style="display: none;">T</span>
                 Finanzas Personales
             </a>
             <div class="navbar-nav ms-auto">
