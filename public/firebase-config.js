@@ -1,7 +1,6 @@
-// public/firebase-config.js - Firebase Configuration
+// public/firebase-config.js - Versión con autenticación
 console.log("🔥 Cargando configuración de Firebase...");
 
-// Tu configuración de Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyBwitPnia6EEHpfWhQyZ2bXqDkLdamsC-4",
     authDomain: "finanzas-personales-torotech83.firebaseapp.com",
@@ -11,14 +10,13 @@ const firebaseConfig = {
     appId: "1:532180918419:web:23a3441dc4175dd0bd6d66"
 };
 
-// Inicializar Firebase con manejo de errores
 try {
     if (typeof firebase !== 'undefined') {
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
             console.log("✅ Firebase inicializado correctamente");
         } else {
-            firebase.app(); // Usar la instancia existente
+            firebase.app();
             console.log("ℹ️ Firebase ya estaba inicializado");
         }
         
@@ -28,7 +26,15 @@ try {
         
         console.log("✅ Servicios de Firebase inicializados");
         
-        // Disparar evento personalizado cuando Firebase esté listo
+        // Configurar persistencia de autenticación
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .then(() => {
+                console.log("✅ Persistencia de auth configurada");
+            })
+            .catch((error) => {
+                console.error("❌ Error configurando persistencia:", error);
+            });
+        
         window.dispatchEvent(new Event('firebaseReady'));
         
     } else {
