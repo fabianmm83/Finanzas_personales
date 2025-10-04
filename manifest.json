@@ -1,27 +1,14 @@
 {
   "name": "Finanzas Personales",
   "short_name": "Finanzas",
-  "description": "Aplicación de Finanzas Personales - Controla tus gastos e ingresos",
+  "description": "Controla tus gastos e ingresos",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8f9fa",
+  "background_color": "#ffffff",
   "theme_color": "#2c3e50",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
   "scope": "/",
-  "lang": "es",
   "icons": [
-    {
-      "src": "/static/logo_torotech1.webp",
-      "sizes": "192x192",
-      "type": "image/webp",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/static/logo_torotech1.webp",
-      "sizes": "512x512",
-      "type": "image/webp",
-      "purpose": "any maskable"
-    },
     {
       "src": "/static/icon-192.png",
       "sizes": "192x192",
@@ -29,23 +16,9 @@
     },
     {
       "src": "/static/icon-512.png",
-      "sizes": "512x512",
+      "sizes": "512x512", 
       "type": "image/png"
     }
   ],
-  "categories": ["finance", "productivity"],
-  "screenshots": [
-    {
-      "src": "/static/screenshot1.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
-      "src": "/static/screenshot2.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ]
+  "categories": ["finance", "productivity"]
 }
