@@ -50,6 +50,42 @@
                     <strong>❌ Error:</strong> <span id="errorText"></span>
                 </div>
 
+                <!-- Formulario de Login -->
+                <div id="loginForm" class="hidden">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">🔐 Iniciar Sesión o Registrarse</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="authForm">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" required 
+                                           placeholder="tu@email.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="password" required 
+                                           placeholder="Mínimo 6 caracteres" minlength="6">
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary" id="loginSubmitBtn">
+                                        Iniciar Sesión
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" id="registerBtn">
+                                        Crear Cuenta Nueva
+                                    </button>
+                                </div>
+                            </form>
+                            <div class="mt-3 text-center">
+                                <button type="button" class="btn btn-sm btn-warning" id="anonymousLoginBtn">
+                                    🎭 Continuar como Invitado
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Información de usuario -->
                 <div id="userInfo" class="hidden">
                     <div class="alert alert-success">
@@ -137,6 +173,7 @@
             authMessage: document.getElementById('authMessage'),
             errorMessage: document.getElementById('errorMessage'),
             errorText: document.getElementById('errorText'),
+            loginForm: document.getElementById('loginForm'),
             userInfo: document.getElementById('userInfo'),
             userEmail: document.getElementById('userEmail'),
             startMigrationBtn: document.getElementById('startMigrationBtn'),
@@ -197,6 +234,7 @@
             hideElement(elements.readyMessage);
             hideElement(elements.authMessage);
             hideElement(elements.errorMessage);
+            hideElement(elements.loginForm);
             hideElement(elements.userInfo);
             showElement(elements.initMessage);
 
@@ -265,10 +303,11 @@
             appState.userAuthenticated = true;
             
             hideElement(elements.authMessage);
+            hideElement(elements.loginForm);
             showElement(elements.userInfo);
             elements.userEmail.textContent = user.email;
             
-            // Habilitar botones
+            // Habilitar botones de migración
             elements.startMigrationBtn.disabled = false;
             elements.checkDataBtn.disabled = false;
             showElement(elements.startMigrationBtn);
@@ -282,26 +321,124 @@
             appState.userAuthenticated = false;
             
             showElement(elements.authMessage);
+            showElement(elements.loginForm);
             hideElement(elements.userInfo);
             
-            // Mostrar botón de login
+            // Mostrar botón de login simple
             elements.loginBtn.disabled = false;
             showElement(elements.loginBtn);
             hideElement(elements.startMigrationBtn);
             hideElement(elements.checkDataBtn);
         }
 
-        // Iniciar sesión
-        function setupLogin() {
-            elements.loginBtn.addEventListener('click', async () => {
+        // Configurar formulario de autenticación
+        function setupAuthForm() {
+            const authForm = document.getElementById('authForm');
+            const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const anonymousLoginBtn = document.getElementById('anonymousLoginBtn');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+
+            // Login con email/password
+            authForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = emailInput.value;
+                const password = passwordInput.value;
+                
+                if (!email || !password) {
+                    showToast("Por favor completa todos los campos", "warning");
+                    return;
+                }
+
+                loginSubmitBtn.disabled = true;
+                loginSubmitBtn.innerHTML = '⏳ Iniciando sesión...';
+
                 try {
-                    // Usar autenticación con Google (puedes cambiar el proveedor)
-                    const provider = new firebase.auth.GoogleAuthProvider();
-                    await firebase.auth().signInWithPopup(provider);
+                    const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
                     showToast("Sesión iniciada correctamente", "success");
                 } catch (error) {
                     console.error("❌ Error iniciando sesión:", error);
-                    showToast("Error iniciando sesión: " + error.message, "danger");
+                    
+                    if (error.code === 'auth/user-not-found') {
+                        showToast("Usuario no encontrado. ¿Quieres crear una cuenta?", "warning");
+                    } else if (error.code === 'auth/wrong-password') {
+                        showToast("Contraseña incorrecta", "danger");
+                    } else {
+                        showToast("Error iniciando sesión: " + error.message, "danger");
+                    }
+                } finally {
+                    loginSubmitBtn.disabled = false;
+                    loginSubmitBtn.innerHTML = 'Iniciar Sesión';
+                }
+            });
+
+            // Registro de nuevo usuario
+            registerBtn.addEventListener('click', async () => {
+                const email = emailInput.value;
+                const password = passwordInput.value;
+                
+                if (!email || !password) {
+                    showToast("Por favor completa todos los campos", "warning");
+                    return;
+                }
+
+                if (password.length < 6) {
+                    showToast("La contraseña debe tener al menos 6 caracteres", "warning");
+                    return;
+                }
+
+                registerBtn.disabled = true;
+                registerBtn.innerHTML = '⏳ Creando cuenta...';
+
+                try {
+                    const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                    showToast("¡Cuenta creada correctamente! Sesión iniciada.", "success");
+                } catch (error) {
+                    console.error("❌ Error creando cuenta:", error);
+                    
+                    if (error.code === 'auth/email-already-in-use') {
+                        showToast("Este email ya está registrado. Inicia sesión.", "warning");
+                    } else if (error.code === 'auth/invalid-email') {
+                        showToast("Email inválido", "danger");
+                    } else {
+                        showToast("Error creando cuenta: " + error.message, "danger");
+                    }
+                } finally {
+                    registerBtn.disabled = false;
+                    registerBtn.innerHTML = 'Crear Cuenta Nueva';
+                }
+            });
+
+            // Autenticación anónima
+            anonymousLoginBtn.addEventListener('click', async () => {
+                anonymousLoginBtn.disabled = true;
+                anonymousLoginBtn.innerHTML = '⏳ Conectando...';
+
+                try {
+                    const userCredential = await firebase.auth().signInAnonymously();
+                    showToast("Sesión de invitado iniciada", "success");
+                } catch (error) {
+                    console.error("❌ Error en autenticación anónima:", error);
+                    showToast("Error conectando como invitado: " + error.message, "danger");
+                    anonymousLoginBtn.disabled = false;
+                    anonymousLoginBtn.innerHTML = '🎭 Continuar como Invitado';
+                }
+            });
+        }
+
+        // Iniciar sesión con Google (botón simple)
+        function setupLogin() {
+            elements.loginBtn.addEventListener('click', async () => {
+                try {
+                    // Mostrar formulario completo cuando se hace clic en el botón simple
+                    hideElement(elements.authMessage);
+                    showElement(elements.loginForm);
+                    hideElement(elements.loginBtn);
+                } catch (error) {
+                    console.error("❌ Error:", error);
+                    showToast("Error: " + error.message, "danger");
                 }
             });
         }
@@ -380,6 +517,7 @@
             console.log('✅ Página cargada, inicializando aplicación...');
             
             // Configurar event listeners
+            setupAuthForm();
             setupLogin();
             setupMigration();
             setupDataCheck();
