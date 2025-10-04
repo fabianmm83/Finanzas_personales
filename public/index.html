@@ -9,60 +9,185 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
    
    <style>
-    /* Agregar estos estilos al CSS existente */
-    
-    /* Navbar en móviles - botones en línea */
-    @media (max-width: 768px) {
-        .navbar-nav {
-            flex-direction: row;
-            flex-wrap: wrap;
-            justify-content: center;
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --danger-color: #e74c3c;
         }
         
-        .navbar-nav .nav-item {
-            margin: 0 5px;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+            padding-top: 80px; /* Para la navbar fija */
         }
         
-        .navbar-nav .nav-link {
-            padding: 0.5rem;
-            font-size: 0.8rem;
+        .navbar {
+            background: linear-gradient(135deg, var(--dark-color), #34495e);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
         }
         
-        .navbar-nav .nav-link i {
-            display: block;
-            text-align: center;
-            margin-bottom: 2px;
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
         }
         
-        .navbar-nav .nav-link span {
-            display: none;
-        }
-    }
-    
-    /* Logo más pequeño en móviles */
-    @media (max-width: 576px) {
         .logo-img {
-            height: 25px;
+            height: 40px;
+            width: auto;
+            margin-right: 10px;
+            object-fit: contain;
         }
         
-        .navbar-brand span {
-            font-size: 1rem;
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
         }
-    }
-</style>
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        /* Navbar en móviles - botones en línea */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 70px;
+            }
+            
+            .navbar-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 5px;
+            }
+            
+            .navbar-nav .nav-item {
+                margin: 0;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.8rem;
+                border-radius: 5px;
+                transition: background-color 0.3s;
+            }
+            
+            .navbar-nav .nav-link:hover {
+                background-color: rgba(255,255,255,0.1);
+            }
+            
+            .navbar-nav .nav-link i {
+                display: block;
+                text-align: center;
+                margin-bottom: 2px;
+                font-size: 1rem;
+            }
+            
+            .navbar-nav .nav-link span {
+                display: none;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .logo-img {
+                height: 30px;
+            }
+        }
+        
+        /* Logo más pequeño en móviles muy pequeños */
+        @media (max-width: 576px) {
+            .navbar-brand span {
+                display: none;
+            }
+            
+            .logo-img {
+                margin-right: 0;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+            }
+            
+            .navbar-nav .nav-link i {
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Mejoras para móviles */
+        .table-responsive {
+            font-size: 0.9rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        /* Asegurar que los inputs sean legibles en móviles */
+        .form-control, .form-select {
+            font-size: 16px; /* Previene zoom en iOS */
+        }
+        
+        /* Estilos para el contenido principal */
+        .container {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+        
+        /* Mejorar la visibilidad de los botones en móviles */
+        .btn {
+            font-size: 0.9rem;
+            padding: 6px 12px;
+        }
+    </style>
 
 </head>
 <body>
     <!-- Barra de navegación fija -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="#" onclick="if(auth.currentUser) loadDashboard(auth.currentUser); return false;">
-    <img src="/static/logo_torotech1.webp" alt="Logo ToroTech" class="logo-img" onerror="this.style.display='none'">
-    <span>Finanzas Personales</span>
-</a>
+            <a class="navbar-brand" href="#" onclick="if(auth && auth.currentUser) { loadDashboard(auth.currentUser); } return false;">
+                <img src="/static/logo_torotech1.webp" alt="Logo ToroTech" class="logo-img" onerror="this.style.display='none'">
+                <span>Finanzas Personales</span>
+            </a>
             
             <!-- Botón hamburguesa para móviles -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
@@ -71,27 +196,27 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="nav-home">
-                            <i class="fas fa-home"></i> Inicio
+                            <i class="fas fa-home"></i> <span>Inicio</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="nav-profile">
-                            <i class="fas fa-user"></i> Perfil
+                            <i class="fas fa-user"></i> <span>Perfil</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="nav-add-transaction">
-                            <i class="fas fa-plus-circle"></i> Añadir Transacción
+                            <i class="fas fa-plus-circle"></i> <span>Añadir Transacción</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="nav-logout" style="display: none;">
-                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                            <i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="nav-login" style="display: none;">
-                            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                            <i class="fas fa-sign-in-alt"></i> <span>Iniciar Sesión</span>
                         </a>
                     </li>
                 </ul>
@@ -152,7 +277,22 @@
                 };
                 logo.onload = function() {
                     console.log('✅ Logo cargado correctamente');
-                };
+                this.style.display = 'block';
+                this.style.height = '40px';
+                this.style.width = 'auto';
+                this.style.objectFit = 'contain';
+                this.style.marginRight = '10px';
+                console.log('Logo dimensions:', this.offsetWidth, 'x', this.offsetHeight);
+                console.log('Logo src:', this.src);
+                console.log('Logo complete:', this.complete);
+                console.log('Logo natural dimensions:', this.naturalWidth, 'x', this.naturalHeight);
+                console.log('Logo current src:', this.currentSrc);
+            };
+                
+                // Forzar la carga si es necesario
+                if (logo.complete) {
+                    logo.onload();
+                }
             }
             
             // Verificar que todos los elementos del navbar existen
@@ -165,6 +305,48 @@
                 const element = document.getElementById(id);
                 console.log(`Nav element ${id}:`, element ? '✅' : '❌');
             });
+
+            // Verificar la navbar
+            const navbar = document.querySelector('.navbar');
+            console.log('Navbar encontrada:', navbar ? '✅' : '❌');
+            if (navbar) {
+                console.log('Navbar styles:', window.getComputedStyle(navbar));
+            }
+
+            // Debug del logo
+            console.log('🔍 Debug del logo:');
+            console.log('Logo element:', logo);
+            if (logo) {
+                console.log('Logo src:', logo.src);
+                console.log('Logo currentSrc:', logo.currentSrc);
+                console.log('Logo complete:', logo.complete);
+                console.log('Logo natural dimensions:', logo.naturalWidth, 'x', logo.naturalHeight);
+            }
+        });
+
+        // Función auxiliar para debug del CSS
+        function debugLayout() {
+            console.log('=== DEBUG LAYOUT ===');
+            console.log('Window height:', window.innerHeight);
+            console.log('Window width:', window.innerWidth);
+            console.log('Body padding-top:', document.body.style.paddingTop);
+            
+            const navbar = document.querySelector('.navbar');
+            if (navbar) {
+                const rect = navbar.getBoundingClientRect();
+                console.log('Navbar height:', rect.height);
+                console.log('Navbar position:', rect.top, rect.left);
+                console.log('Navbar computed styles:', {
+                    display: window.getComputedStyle(navbar).display,
+                    position: window.getComputedStyle(navbar).position,
+                    background: window.getComputedStyle(navbar).background
+                });
+            }
+        }
+
+        // Ejecutar debug después de que todo cargue
+        window.addEventListener('load', function() {
+            setTimeout(debugLayout, 1000);
         });
     </script>
 </body>
