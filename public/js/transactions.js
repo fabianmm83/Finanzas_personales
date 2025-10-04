@@ -28,47 +28,51 @@ class TransactionManager {
         }
     }
 
-    async getTransactions(filters = {}) {
-        try {
-            const user = firebase.auth().currentUser;
-            if (!user) return [];
+   
+    // En transactions.js - actualiza la función getTransactions
+async getTransactions(filters = {}) {
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) return [];
 
-            let query = this.db.collection('transactions')
-                .where('userId', '==', user.uid);
+        let query = this.db.collection('transactions')
+            .where('userId', '==', user.uid);
 
-            // Aplicar filtros
-            if (filters.month && filters.year) {
-                const startDate = new Date(filters.year, filters.month - 1, 1);
-                const endDate = new Date(filters.year, filters.month, 0);
-                query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
-                            .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
-            }
-
-            if (filters.startDate && filters.endDate) {
-                query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(new Date(filters.startDate)))
-                            .where('date', '<=', firebase.firestore.Timestamp.fromDate(new Date(filters.endDate)));
-            }
-
-            if (filters.category) {
-                query = query.where('category', '==', filters.category);
-            }
-
-            if (filters.type) {
-                query = query.where('type', '==', filters.type);
-            }
-
-            const snapshot = await query.orderBy('date', 'desc').get();
-            return snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-
-        } catch (error) {
-            console.error('Error getting transactions:', error);
-            showToast('Error al cargar transacciones', 'danger');
-            return [];
+        // Aplicar filtros
+        if (filters.month && filters.year) {
+            const startDate = new Date(filters.year, filters.month - 1, 1);
+            const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
+            
+            // CORRECCIÓN: Usar Timestamp para las fechas
+            query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+                        .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
         }
+
+        if (filters.startDate && filters.endDate) {
+            query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(new Date(filters.startDate)))
+                        .where('date', '<=', firebase.firestore.Timestamp.fromDate(new Date(filters.endDate)));
+        }
+
+        if (filters.category) {
+            query = query.where('category', '==', filters.category);
+        }
+
+        if (filters.type) {
+            query = query.where('type', '==', filters.type);
+        }
+
+        const snapshot = await query.orderBy('date', 'desc').get();
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+    } catch (error) {
+        console.error('Error getting transactions:', error);
+        showToast('Error al cargar transacciones', 'danger');
+        return [];
     }
+}
 
     async getDashboardData(month, year) {
         try {

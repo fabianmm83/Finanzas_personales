@@ -768,8 +768,428 @@ function showAllTransactions() {
     showToast('Vista completa de transacciones en desarrollo', 'info');
 }
 
-// Resto de las funciones existentes (showAddTransaction, showAddBudget, showProfile, etc.)
-// ... [mantén todas las funciones existentes que no se han modificado]
+// Función para actualizar la barra de navegación
+function updateNavbar(user) {
+    const navAuthButtons = document.getElementById('nav-auth-buttons');
+    
+    if (user) {
+        navAuthButtons.innerHTML = `
+            <div class="d-flex align-items-center">
+                <span class="navbar-text text-light me-3">
+                    <i class="fas fa-user me-1"></i> ${user.email}
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+                </button>
+            </div>
+        `;
+    } else {
+        navAuthButtons.innerHTML = `
+            <div class="d-flex align-items-center">
+                <button class="btn btn-outline-light btn-sm me-2" onclick="loadLoginPage()">
+                    <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión
+                </button>
+                <button class="btn btn-light btn-sm" onclick="showRegisterPage()">
+                    <i class="fas fa-user-plus me-1"></i> Registrarse
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Función para mostrar todas las transacciones (completa)
+function showAllTransactions() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-list text-primary me-2"></i>
+                    Todas las Transacciones
+                </h2>
+                <div>
+                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddTransaction()">
+                        <i class="fas fa-plus me-1"></i> Nueva Transacción
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-receipt me-2"></i>Historial de Transacciones
+                            </h5>
+                            <div id="all-transactions-list">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                                    <p class="text-muted">Cargando transacciones...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    loadAllTransactions(currentYear, currentMonth);
+}
+
+// Función para cargar todas las transacciones
+async function loadAllTransactions(year, month) {
+    try {
+        const transactions = await transactionManager.getTransactions({ month, year });
+        const transactionsList = document.getElementById('all-transactions-list');
+        
+        if (transactions.length === 0) {
+            transactionsList.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay transacciones para mostrar</p>
+                    <button class="btn btn-primary" onclick="showAddTransaction()">
+                        <i class="fas fa-plus me-2"></i>Agregar primera transacción
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        let transactionsHTML = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Categoría</th>
+                            <th>Descripción</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        transactions.forEach(transaction => {
+            const date = transaction.date.toDate();
+            const isIncome = transaction.type === 'income';
+            
+            transactionsHTML += `
+                <tr>
+                    <td>${date.toLocaleDateString('es-ES')}</td>
+                    <td>
+                        <span class="badge bg-light text-dark">${transaction.category}</span>
+                    </td>
+                    <td>${transaction.description || '-'}</td>
+                    <td>
+                        <span class="badge ${isIncome ? 'bg-success' : 'bg-danger'}">
+                            ${isIncome ? 'Ingreso' : 'Gasto'}
+                        </span>
+                    </td>
+                    <td class="text-end ${isIncome ? 'text-success' : 'text-danger'}">
+                        <strong>${isIncome ? '+' : '-'}$${transaction.amount.toFixed(2)}</strong>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        transactionsHTML += `
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3 text-center">
+                <p class="text-muted">Mostrando ${transactions.length} transacciones</p>
+            </div>
+        `;
+        
+        transactionsList.innerHTML = transactionsHTML;
+        
+    } catch (error) {
+        console.error('Error loading all transactions:', error);
+        showToast('Error al cargar las transacciones', 'danger');
+    }
+}
+
+// Función para mostrar página de presupuestos (completa)
+function showBudgetsPage() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-pie text-primary me-2"></i>
+                    Mis Presupuestos
+                </h2>
+                <div>
+                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddBudget()">
+                        <i class="fas fa-plus me-1"></i> Nuevo Presupuesto
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-list me-2"></i>Presupuestos Activos
+                            </h5>
+                            <div id="budgets-list">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                                    <p class="text-muted">Cargando presupuestos...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    loadBudgetsList(currentYear, currentMonth);
+}
+
+// Función para cargar lista de presupuestos
+async function loadBudgetsList(year, month) {
+    try {
+        const budgetStatus = await budgetManager.getBudgetStatus(parseInt(month), parseInt(year));
+        const budgetsList = document.getElementById('budgets-list');
+        
+        if (budgetStatus.length === 0) {
+            budgetsList.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay presupuestos para ${getMonthName(month)} ${year}</p>
+                    <button class="btn btn-primary" onclick="showAddBudget()">
+                        <i class="fas fa-plus me-2"></i>Crear presupuesto
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        let budgetsHTML = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Límite Mensual</th>
+                            <th>Gastado</th>
+                            <th>Restante</th>
+                            <th>Progreso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        budgetStatus.forEach(budget => {
+            const progressClass = budget.percentageUsed < 80 ? 'bg-success' : 
+                                budget.percentageUsed < 100 ? 'bg-warning' : 'bg-danger';
+            
+            budgetsHTML += `
+                <tr>
+                    <td>
+                        <strong>${budget.category}</strong>
+                    </td>
+                    <td>
+                        <strong>$${budget.limit.toFixed(2)}</strong>
+                    </td>
+                    <td class="text-danger">
+                        $${budget.spent.toFixed(2)}
+                    </td>
+                    <td class="text-success">
+                        $${budget.remaining.toFixed(2)}
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                <div class="progress-bar ${progressClass}" 
+                                     role="progressbar" 
+                                     style="width: ${Math.min(budget.percentageUsed, 100)}%"
+                                     aria-valuenow="${budget.percentageUsed}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            <small class="text-muted">${budget.percentageUsed.toFixed(1)}%</small>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        budgetsHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        budgetsList.innerHTML = budgetsHTML;
+        
+    } catch (error) {
+        console.error('Error loading budgets list:', error);
+        showToast('Error al cargar los presupuestos', 'danger');
+    }
+}
+
+// Actualizar la función initializeApp para incluir la barra de navegación
+function initializeApp() {
+    showLoading(true);
+    
+    // Verificar si Firebase está cargado
+    if (typeof firebase === 'undefined' || !firebase.app) {
+        console.error("Firebase no se cargó correctamente");
+        showError("Error: Firebase no se pudo cargar. Verifica la conexión.");
+        return;
+    }
+    
+    console.log("Firebase detectado, verificando autenticación...");
+    
+    // Inicializar managers si no existen
+    if (typeof transactionManager === 'undefined') {
+        console.log("Inicializando TransactionManager...");
+        window.transactionManager = new TransactionManager();
+    }
+    
+    if (typeof budgetManager === 'undefined') {
+        console.log("Inicializando BudgetManager...");
+        window.budgetManager = new BudgetManager();
+    }
+    
+    // Escuchar cambios de autenticación
+    auth.onAuthStateChanged((user) => {
+        console.log("Estado de autenticación:", user ? "Usuario logueado" : "No logueado");
+        
+        // Actualizar barra de navegación
+        updateNavbar(user);
+        
+        if (user) {
+            loadDashboard(user);
+        } else {
+            loadLoginPage();
+        }
+        showLoading(false);
+    }, (error) => {
+        console.error("Error en autenticación:", error);
+        showError("Error de autenticación: " + error.message);
+        showLoading(false);
+    });
+}
+
+// Actualizar las funciones de navegación para que sean funcionales
+function showBudgetsPage() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-chart-pie text-primary me-2"></i>
+                    Mis Presupuestos
+                </h2>
+                <div>
+                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddBudget()">
+                        <i class="fas fa-plus me-1"></i> Nuevo Presupuesto
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-list me-2"></i>Presupuestos Activos
+                            </h5>
+                            <div id="budgets-list">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                                    <p class="text-muted">Cargando presupuestos...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    loadBudgetsList(currentYear, currentMonth);
+}
+
+function showAllTransactions() {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-list text-primary me-2"></i>
+                    Todas las Transacciones
+                </h2>
+                <div>
+                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddTransaction()">
+                        <i class="fas fa-plus me-1"></i> Nueva Transacción
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-receipt me-2"></i>Historial de Transacciones
+                            </h5>
+                            <div id="all-transactions-list">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                                    <p class="text-muted">Cargando transacciones...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    loadAllTransactions(currentYear, currentMonth);
+}
+
+
+
+
+
 
 function showAddTransaction() {
     const content = document.getElementById('content');
@@ -1031,3 +1451,8 @@ function showError(message) {
         </div>
     `;
 }
+
+
+
+
+
