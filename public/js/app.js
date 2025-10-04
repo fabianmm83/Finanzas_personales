@@ -576,27 +576,65 @@ function updateFinancialSummary(summary) {
     financialSummary.innerHTML = summaryHTML;
 }
 
-// Función para procesar fecha de transacción
+
+
+// Función para procesar fecha de transacción - MEJORADA
 function processTransactionDate(transaction) {
+    console.log('🔍 Procesando fecha de transacción:', transaction);
+    
     try {
-        if (transaction.date && typeof transaction.date.toDate === 'function') {
-            // Si es un Timestamp de Firebase
-            return transaction.date.toDate();
-        } else if (transaction.date && transaction.date.seconds) {
-            // Si es un objeto Timestamp serializado
-            return new Date(transaction.date.seconds * 1000);
-        } else if (transaction.date) {
-            // Si es un string de fecha
-            return new Date(transaction.date);
-        } else {
-            // Fecha por defecto
-            return new Date();
+        // Si ya es un objeto Date válido
+        if (transaction.date instanceof Date && !isNaN(transaction.date.getTime())) {
+            console.log('✅ Ya es un Date válido');
+            return transaction.date;
         }
+        
+        // Si es un Timestamp de Firebase
+        if (transaction.date && typeof transaction.date.toDate === 'function') {
+            console.log('✅ Es un Timestamp de Firebase');
+            const date = transaction.date.toDate();
+            if (date instanceof Date && !isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        // Si es un objeto Timestamp serializado
+        if (transaction.date && transaction.date.seconds) {
+            console.log('✅ Es un Timestamp serializado');
+            const date = new Date(transaction.date.seconds * 1000);
+            if (date instanceof Date && !isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        // Si es un string de fecha
+        if (transaction.date && typeof transaction.date === 'string') {
+            console.log('✅ Es un string de fecha');
+            const date = new Date(transaction.date);
+            if (date instanceof Date && !isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        // Si es un número (timestamp)
+        if (transaction.date && typeof transaction.date === 'number') {
+            console.log('✅ Es un número timestamp');
+            const date = new Date(transaction.date);
+            if (date instanceof Date && !isNaN(date.getTime())) {
+                return date;
+            }
+        }
+        
+        // Fecha por defecto
+        console.log('⚠️ Usando fecha por defecto');
+        return new Date();
+        
     } catch (error) {
-        console.error('Error procesando fecha:', error, transaction);
+        console.error('❌ Error procesando fecha:', error, transaction);
         return new Date();
     }
 }
+
 
 // FUNCIÓN MEJORADA: Actualizar lista de transacciones con botones de editar/eliminar
 function updateTransactionsList(transactions) {
@@ -1156,26 +1194,33 @@ function applyFilters() {
     showToast('Filtros aplicados: ' + (category || 'Todas categorías'), 'success');
 }
 
-// NUEVAS FUNCIONES: Editar y eliminar transacciones
 async function editTransaction(transactionId) {
     try {
+        console.log('🔍 Editando transacción ID:', transactionId);
+        
         // Obtener la transacción
         const transactions = await transactionManager.getTransactions({});
         const transaction = transactions.find(t => t.id === transactionId);
         
         if (!transaction) {
+            console.error('❌ Transacción no encontrada');
             showToast('Transacción no encontrada', 'danger');
             return;
         }
+        
+        console.log('✅ Transacción encontrada:', transaction);
+        console.log('📅 Fecha de la transacción:', transaction.date);
+        console.log('📅 Tipo de fecha:', typeof transaction.date);
         
         // Mostrar formulario de edición
         showEditTransactionForm(transaction);
         
     } catch (error) {
-        console.error('Error al editar transacción:', error);
+        console.error('❌ Error al editar transacción:', error);
         showToast('Error al cargar la transacción', 'danger');
     }
 }
+
 
 async function deleteTransaction(transactionId) {
     if (confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
@@ -1191,10 +1236,42 @@ async function deleteTransaction(transactionId) {
     }
 }
 
+
+
+
 function showEditTransactionForm(transaction) {
     const content = document.getElementById('content');
-    const date = processTransactionDate(transaction);
-    const formattedDate = date.toISOString().split('T')[0];
+    
+    // CORRECCIÓN: Manejar mejor el formato de fecha
+    let formattedDate;
+    try {
+        const date = processTransactionDate(transaction);
+        
+        // Verificar si la fecha es válida
+        if (date instanceof Date && !isNaN(date.getTime())) {
+            // Formatear a YYYY-MM-DD para input type="date"
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            formattedDate = `${year}-${month}-${day}`;
+        } else {
+            // Si la fecha no es válida, usar la fecha actual
+            console.warn('Fecha inválida, usando fecha actual');
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            formattedDate = `${year}-${month}-${day}`;
+        }
+    } catch (error) {
+        console.error('Error procesando fecha:', error);
+        // Usar fecha actual como fallback
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        formattedDate = `${year}-${month}-${day}`;
+    }
     
     content.innerHTML = `
         <div class="row justify-content-center">
@@ -1273,6 +1350,9 @@ function showEditTransactionForm(transaction) {
         }
     });
 }
+
+
+
 
 // Funciones de navegación y páginas (se mantienen igual)
 function showAllTransactions() {
