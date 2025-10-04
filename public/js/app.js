@@ -33,9 +33,15 @@ function initializeApp() {
         window.budgetManager = new BudgetManager();
     }
     
+    // Configurar navegación
+    setupNavigation();
+    
     // Escuchar cambios de autenticación
     auth.onAuthStateChanged((user) => {
         console.log("Estado de autenticación:", user ? "Usuario logueado" : "No logueado");
+        
+        // Actualizar barra de navegación
+        updateNavbar(user);
         
         if (user) {
             loadDashboard(user);
@@ -48,6 +54,94 @@ function initializeApp() {
         showError("Error de autenticación: " + error.message);
         showLoading(false);
     });
+}
+
+// Configurar navegación
+function setupNavigation() {
+    console.log('🔧 Configurando navegación...');
+    
+    // Manejadores de los botones de navegación
+    const navHome = document.getElementById('nav-home');
+    const navProfile = document.getElementById('nav-profile');
+    const navAddTransaction = document.getElementById('nav-add-transaction');
+    const navLogout = document.getElementById('nav-logout');
+    const navLogin = document.getElementById('nav-login');
+
+    if (navHome) {
+        navHome.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (auth.currentUser) {
+                loadDashboard(auth.currentUser);
+            }
+        });
+    }
+
+    if (navProfile) {
+        navProfile.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (auth.currentUser) {
+                showProfile();
+            }
+        });
+    }
+
+    if (navAddTransaction) {
+        navAddTransaction.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (auth.currentUser) {
+                showAddTransaction();
+            }
+        });
+    }
+
+    if (navLogout) {
+        navLogout.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
+
+    if (navLogin) {
+        navLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadLoginPage();
+        });
+    }
+}
+
+// Función para actualizar la barra de navegación CORREGIDA
+function updateNavbar(user) {
+    console.log('🔄 Actualizando navbar...');
+    
+    const navLogout = document.getElementById('nav-logout');
+    const navLogin = document.getElementById('nav-login');
+    const navItems = document.querySelectorAll('.nav-item:not(:first-child)');
+
+    if (user) {
+        // Usuario logueado - mostrar botones de usuario
+        if (navLogout) navLogout.style.display = 'block';
+        if (navLogin) navLogin.style.display = 'none';
+        
+        // Mostrar todos los items de navegación
+        navItems.forEach(item => {
+            item.style.display = 'block';
+        });
+        
+        console.log('✅ Navbar actualizada para usuario logueado');
+    } else {
+        // Usuario no logueado - mostrar solo login
+        if (navLogout) navLogout.style.display = 'none';
+        if (navLogin) navLogin.style.display = 'block';
+        
+        // Ocultar items de navegación excepto login
+        navItems.forEach(item => {
+            if (!item.querySelector('#nav-login')) {
+                item.style.display = 'none';
+            }
+        });
+        
+        console.log('✅ Navbar actualizada para usuario no logueado');
+    }
 }
 
 function loadLoginPage() {
@@ -200,29 +294,6 @@ function loadDashboard(user) {
                 </button>
             </div>
 
-            <!-- Carrusel de meses -->
-            <div class="row justify-content-center mb-4">
-                <div class="col-md-10">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <div id="monthsCarousel" class="carousel slide" data-bs-ride="false">
-                                <div class="carousel-inner" id="months-carousel-inner">
-                                    <!-- Se llenará dinámicamente -->
-                                </div>
-                                <button class="carousel-control-prev" type="button" data-bs-target="#monthsCarousel" data-bs-slide="prev">
-                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Anterior</span>
-                                </button>
-                                <button class="carousel-control-next" type="button" data-bs-target="#monthsCarousel" data-bs-slide="next">
-                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                    <span class="visually-hidden">Siguiente</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Filtros Avanzados -->
             <div class="row justify-content-center mb-4">
                 <div class="col-md-12">
@@ -353,9 +424,6 @@ async function loadDashboardData(year, month) {
         // Generar gráficos
         generateCharts(dashboardData);
         
-        // Cargar carrusel de meses
-        await loadMonthsCarousel(year, month);
-        
         // Cargar categorías en filtros
         loadCategoriesFilter(dashboardData.categories);
         
@@ -369,6 +437,12 @@ async function loadDashboardData(year, month) {
 
 // Función para actualizar el resumen financiero
 function updateFinancialSummary(summary) {
+    const financialSummary = document.getElementById('financial-summary');
+    if (!financialSummary) {
+        console.error('❌ Elemento financial-summary no encontrado');
+        return;
+    }
+
     const ahorroPotencial = summary.totalIncome * 0.2;
     const daysInMonth = new Date(summary.year, summary.month, 0).getDate();
     const currentDay = new Date().getDate();
@@ -419,12 +493,16 @@ function updateFinancialSummary(summary) {
         </div>
     `;
     
-    document.getElementById('financial-summary').innerHTML = summaryHTML;
+    financialSummary.innerHTML = summaryHTML;
 }
 
 // Función para actualizar lista de transacciones
 function updateTransactionsList(transactions) {
     const transactionsList = document.getElementById('transactions-list');
+    if (!transactionsList) {
+        console.error('❌ Elemento transactions-list no encontrado');
+        return;
+    }
     
     if (transactions.length === 0) {
         transactionsList.innerHTML = `
@@ -538,8 +616,8 @@ function generateCharts(dashboardData) {
     // Gráfico de Ingresos por categoría
     const incomeCtx = document.getElementById('incomeChart');
     if (incomeCtx) {
-        const incomeCategories = Object.keys(dashboardData.categories.income);
-        const incomeAmounts = Object.values(dashboardData.categories.income);
+        const incomeCategories = Object.keys(dashboardData.categories.income || {});
+        const incomeAmounts = Object.values(dashboardData.categories.income || {});
         
         if (incomeCategories.length > 0) {
             chartInstances.income = new Chart(incomeCtx, {
@@ -579,8 +657,8 @@ function generateCharts(dashboardData) {
     // Gráfico de Gastos por categoría
     const expenseCtx = document.getElementById('expenseChart');
     if (expenseCtx) {
-        const expenseCategories = Object.keys(dashboardData.categories.expense);
-        const expenseAmounts = Object.values(dashboardData.categories.expense);
+        const expenseCategories = Object.keys(dashboardData.categories.expense || {});
+        const expenseAmounts = Object.values(dashboardData.categories.expense || {});
         
         if (expenseCategories.length > 0) {
             chartInstances.expense = new Chart(expenseCtx, {
@@ -681,58 +759,8 @@ function getLastDayOfMonth(year, month) {
     return new Date(year, month, 0).toLocaleDateString('es-ES');
 }
 
-// Función para cargar carrusel de meses
-async function loadMonthsCarousel(currentYear, currentMonth) {
-    const carouselInner = document.getElementById('months-carousel-inner');
-    
-    try {
-        const monthlySummaries = await transactionManager.getMonthlySummaries();
-        
-        let carouselHTML = '';
-        monthlySummaries.forEach((monthData, index) => {
-            carouselHTML += `
-                <div class="carousel-item ${monthData.month === currentMonth && monthData.year === currentYear ? 'active' : ''}">
-                    <div class="text-center">
-                        <h5>${monthData.name}</h5>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <p class="mb-1"><strong>Ingresos:</strong></p>
-                                <p class="text-success">$${monthData.income.toFixed(2)}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <p class="mb-1"><strong>Gastos:</strong></p>
-                                <p class="text-danger">$${monthData.expense.toFixed(2)}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <p class="mb-1"><strong>Balance:</strong></p>
-                                <p class="${monthData.balance >= 0 ? 'text-success' : 'text-danger'}">
-                                    $${monthData.balance.toFixed(2)}
-                                </p>
-                            </div>
-                        </div>
-                        <button class="btn btn-sm btn-primary mt-2" onclick="loadDashboardData(${monthData.year}, ${monthData.month})">
-                            Ver Detalles
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        carouselInner.innerHTML = carouselHTML;
-    } catch (error) {
-        console.error('Error loading months carousel:', error);
-        carouselInner.innerHTML = `
-            <div class="carousel-item active">
-                <div class="text-center">
-                    <p class="text-muted">No hay datos de meses anteriores</p>
-                </div>
-            </div>
-        `;
-    }
-}
-
-function loadCategoriesFilter() {
-    const categoryFilter = document.getElementById('categoryFilter');
+function loadCategoriesFilter(categories) {
+    const categoryFilter = document.getElementById('category');
     
     // Verificar que el elemento existe antes de manipularlo
     if (!categoryFilter) {
@@ -744,17 +772,22 @@ function loadCategoriesFilter() {
         // Limpiar opciones existentes
         categoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
         
-        // Obtener categorías únicas de las transacciones
-        const categories = [...new Set(window.transactions.map(t => t.category))].filter(Boolean);
+        // Obtener categorías únicas de income y expense
+        const allCategories = [
+            ...Object.keys(categories.income || {}),
+            ...Object.keys(categories.expense || {})
+        ];
         
-        categories.forEach(category => {
+        const uniqueCategories = [...new Set(allCategories)].filter(Boolean);
+        
+        uniqueCategories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
             option.textContent = category;
             categoryFilter.appendChild(option);
         });
         
-        console.log('✅ Filtro de categorías cargado:', categories.length, 'categorías');
+        console.log('✅ Filtro de categorías cargado:', uniqueCategories.length, 'categorías');
     } catch (error) {
         console.error('❌ Error cargando filtro de categorías:', error);
     }
@@ -770,45 +803,8 @@ function applyFilters() {
     showToast('Filtros aplicados: ' + (category || 'Todas categorías'), 'success');
 }
 
-// Funciones de navegación
-function showBudgetsPage() {
-    showToast('Funcionalidad de presupuestos en desarrollo', 'info');
-}
 
-function showAllTransactions() {
-    showToast('Vista completa de transacciones en desarrollo', 'info');
-}
-
-// Función para actualizar la barra de navegación
-function updateNavbar(user) {
-    const navAuthButtons = document.getElementById('nav-auth-buttons');
-    
-    if (user) {
-        navAuthButtons.innerHTML = `
-            <div class="d-flex align-items-center">
-                <span class="navbar-text text-light me-3">
-                    <i class="fas fa-user me-1"></i> ${user.email}
-                </span>
-                <button class="btn btn-outline-light btn-sm" onclick="logout()">
-                    <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
-                </button>
-            </div>
-        `;
-    } else {
-        navAuthButtons.innerHTML = `
-            <div class="d-flex align-items-center">
-                <button class="btn btn-outline-light btn-sm me-2" onclick="loadLoginPage()">
-                    <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión
-                </button>
-                <button class="btn btn-light btn-sm" onclick="showRegisterPage()">
-                    <i class="fas fa-user-plus me-1"></i> Registrarse
-                </button>
-            </div>
-        `;
-    }
-}
-
-// Función para mostrar todas las transacciones (completa)
+// Funciones de navegación y páginas
 function showAllTransactions() {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -861,6 +857,11 @@ async function loadAllTransactions(year, month) {
         const transactions = await transactionManager.getTransactions({ month, year });
         const transactionsList = document.getElementById('all-transactions-list');
         
+        if (!transactionsList) {
+            console.error('❌ Elemento all-transactions-list no encontrado');
+            return;
+        }
+
         if (transactions.length === 0) {
             transactionsList.innerHTML = `
                 <div class="text-center py-5">
@@ -929,7 +930,6 @@ async function loadAllTransactions(year, month) {
     }
 }
 
-// Función para mostrar página de presupuestos (completa)
 function showBudgetsPage() {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -982,6 +982,11 @@ async function loadBudgetsList(year, month) {
         const budgetStatus = await budgetManager.getBudgetStatus(parseInt(month), parseInt(year));
         const budgetsList = document.getElementById('budgets-list');
         
+        if (!budgetsList) {
+            console.error('❌ Elemento budgets-list no encontrado');
+            return;
+        }
+
         if (budgetStatus.length === 0) {
             budgetsList.innerHTML = `
                 <div class="text-center py-5">
@@ -1060,148 +1065,6 @@ async function loadBudgetsList(year, month) {
     }
 }
 
-// Actualizar la función initializeApp para incluir la barra de navegación
-function initializeApp() {
-    showLoading(true);
-    
-    // Verificar si Firebase está cargado
-    if (typeof firebase === 'undefined' || !firebase.app) {
-        console.error("Firebase no se cargó correctamente");
-        showError("Error: Firebase no se pudo cargar. Verifica la conexión.");
-        return;
-    }
-    
-    console.log("Firebase detectado, verificando autenticación...");
-    
-    // Inicializar managers si no existen
-    if (typeof transactionManager === 'undefined') {
-        console.log("Inicializando TransactionManager...");
-        window.transactionManager = new TransactionManager();
-    }
-    
-    if (typeof budgetManager === 'undefined') {
-        console.log("Inicializando BudgetManager...");
-        window.budgetManager = new BudgetManager();
-    }
-    
-    // Escuchar cambios de autenticación
-    auth.onAuthStateChanged((user) => {
-        console.log("Estado de autenticación:", user ? "Usuario logueado" : "No logueado");
-        
-        // Actualizar barra de navegación
-        updateNavbar(user);
-        
-        if (user) {
-            loadDashboard(user);
-        } else {
-            loadLoginPage();
-        }
-        showLoading(false);
-    }, (error) => {
-        console.error("Error en autenticación:", error);
-        showError("Error de autenticación: " + error.message);
-        showLoading(false);
-    });
-}
-
-// Actualizar las funciones de navegación para que sean funcionales
-function showBudgetsPage() {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="container mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="mb-0">
-                    <i class="fas fa-chart-pie text-primary me-2"></i>
-                    Mis Presupuestos
-                </h2>
-                <div>
-                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
-                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
-                    </button>
-                    <button class="btn btn-primary" onclick="showAddBudget()">
-                        <i class="fas fa-plus me-1"></i> Nuevo Presupuesto
-                    </button>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <h5 class="card-title mb-4">
-                                <i class="fas fa-list me-2"></i>Presupuestos Activos
-                            </h5>
-                            <div id="budgets-list">
-                                <div class="text-center py-5">
-                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-                                    <p class="text-muted">Cargando presupuestos...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    loadBudgetsList(currentYear, currentMonth);
-}
-
-function showAllTransactions() {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="container mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="mb-0">
-                    <i class="fas fa-list text-primary me-2"></i>
-                    Todas las Transacciones
-                </h2>
-                <div>
-                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
-                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
-                    </button>
-                    <button class="btn btn-primary" onclick="showAddTransaction()">
-                        <i class="fas fa-plus me-1"></i> Nueva Transacción
-                    </button>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <h5 class="card-title mb-4">
-                                <i class="fas fa-receipt me-2"></i>Historial de Transacciones
-                            </h5>
-                            <div id="all-transactions-list">
-                                <div class="text-center py-5">
-                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-                                    <p class="text-muted">Cargando transacciones...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    loadAllTransactions(currentYear, currentMonth);
-}
-
-
-
-
-
-
 function showAddTransaction() {
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -1273,9 +1136,11 @@ function showAddTransaction() {
 
         try {
             await transactionManager.addTransaction(transactionData);
+            showToast('Transacción agregada correctamente', 'success');
             loadDashboard(auth.currentUser);
         } catch (error) {
             console.error('Error guardando transacción:', error);
+            showToast('Error al guardar la transacción', 'danger');
         }
     });
 }
@@ -1316,7 +1181,7 @@ function showAddBudget() {
                                     <select class="form-select" id="budget-month" required>
                                         ${Array.from({length: 12}, (_, i) => `
                                             <option value="${i + 1}" ${i + 1 === currentMonth ? 'selected' : ''}>
-                                                ${new Date(2000, i).toLocaleDateString('es-ES', { month: 'long' })}
+                                                ${getMonthName(i + 1)}
                                             </option>
                                         `).join('')}
                                     </select>
@@ -1351,9 +1216,11 @@ function showAddBudget() {
 
         try {
             await budgetManager.createBudget(budgetData);
+            showToast('Presupuesto creado correctamente', 'success');
             loadDashboard(auth.currentUser);
         } catch (error) {
             console.error('Error creando presupuesto:', error);
+            showToast('Error al crear el presupuesto', 'danger');
         }
     });
 }
@@ -1389,7 +1256,7 @@ function showProfile() {
                                         <div class="card bg-light">
                                             <div class="card-body text-center">
                                                 <h5>Transacciones</h5>
-                                                <p class="h3 text-primary">0</p>
+                                                <p class="h3 text-primary" id="profile-transactions-count">0</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1397,10 +1264,30 @@ function showProfile() {
                                         <div class="card bg-light">
                                             <div class="card-body text-center">
                                                 <h5>Presupuestos</h5>
-                                                <p class="h3 text-success">0</p>
+                                                <p class="h3 text-success" id="profile-budgets-count">0</p>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h5>Información de la cuenta</h5>
+                                    <ul class="list-group">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Email verificado
+                                            <span class="badge ${user.emailVerified ? 'bg-success' : 'bg-warning'}">
+                                                ${user.emailVerified ? 'Sí' : 'No'}
+                                            </span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Proveedor
+                                            <span class="badge bg-info">${user.providerData[0]?.providerId || 'Email'}</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Fecha de creación
+                                            <small class="text-muted">${new Date(user.metadata.creationTime).toLocaleDateString('es-ES')}</small>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -1409,7 +1296,90 @@ function showProfile() {
             </div>
         </div>
     `;
+
+    // Cargar estadísticas del perfil
+    loadProfileStats();
 }
+
+// Función para cargar estadísticas del perfil
+async function loadProfileStats() {
+    try {
+        // Obtener transacciones del mes actual
+        const now = new Date();
+        const transactions = await transactionManager.getTransactions({ 
+            month: now.getMonth() + 1, 
+            year: now.getFullYear() 
+        });
+        
+        // Obtener presupuestos del mes actual
+        const budgets = await budgetManager.getBudgetStatus(now.getMonth() + 1, now.getFullYear());
+        
+        // Actualizar contadores
+        const transactionsCount = document.getElementById('profile-transactions-count');
+        const budgetsCount = document.getElementById('profile-budgets-count');
+        
+        if (transactionsCount) {
+            transactionsCount.textContent = transactions.length;
+        }
+        
+        if (budgetsCount) {
+            budgetsCount.textContent = budgets.length;
+        }
+        
+    } catch (error) {
+        console.error('Error loading profile stats:', error);
+    }
+}
+
+// Función para cargar carrusel de meses (si la necesitas)
+async function loadMonthsCarousel(year, month) {
+    try {
+        const monthlySummaries = await transactionManager.getMonthlySummaries();
+        const carouselInner = document.getElementById('months-carousel-inner');
+        
+        if (!carouselInner) {
+            console.log('Carrusel de meses no encontrado en el DOM actual');
+            return;
+        }
+
+        let carouselHTML = '';
+        monthlySummaries.forEach((monthData, index) => {
+            carouselHTML += `
+                <div class="carousel-item ${monthData.month === month && monthData.year === year ? 'active' : ''}">
+                    <div class="text-center">
+                        <h5>${monthData.name}</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Ingresos:</strong></p>
+                                <p class="text-success">$${monthData.income.toFixed(2)}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Gastos:</strong></p>
+                                <p class="text-danger">$${monthData.expense.toFixed(2)}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Balance:</strong></p>
+                                <p class="${monthData.balance >= 0 ? 'text-success' : 'text-danger'}">
+                                    $${monthData.balance.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="loadDashboardData(${monthData.year}, ${monthData.month})">
+                            Ver Detalles
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        carouselInner.innerHTML = carouselHTML;
+    } catch (error) {
+        console.error('Error loading months carousel:', error);
+    }
+}
+
+
+
 
 // FUNCIONES UTILITARIAS
 function showLoading(show) {
@@ -1462,8 +1432,3 @@ function showError(message) {
         </div>
     `;
 }
-
-
-
-
-
