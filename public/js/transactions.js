@@ -1,32 +1,50 @@
-// transactions.js - Versión con Cloud Functions
+// transactions.js - Versión corregida
 if (typeof TransactionManager === 'undefined') {
     class TransactionManager {
         constructor() {
             this.db = firebase.firestore();
-            this.functions = firebase.functions();
+            // Verificar si Firebase Functions está disponible
+            this.functions = null;
+            try {
+                if (firebase.functions) {
+                    this.functions = firebase.functions();
+                    console.log("✅ Firebase Functions disponible");
+                } else {
+                    console.log("⚠️ Firebase Functions no disponible, usando Firestore directamente");
+                }
+            } catch (error) {
+                console.log("⚠️ Error inicializando Functions:", error);
+            }
         }
 
         async addTransaction(transactionData) {
             try {
-                console.log("Agregando transacción via Cloud Function:", transactionData);
+                console.log("📝 Agregando transacción:", transactionData);
                 
-                const addTransactionFunction = this.functions.httpsCallable('addTransaction');
-                const result = await addTransactionFunction(transactionData);
+                // Intentar usar Cloud Functions si está disponible
+                if (this.functions) {
+                    try {
+                        const addTransactionFunction = this.functions.httpsCallable('addTransaction');
+                        const result = await addTransactionFunction(transactionData);
+                        console.log("✅ Transacción agregada via Cloud Functions:", result.data);
+                        showToast(result.data.message || 'Transacción agregada correctamente', 'success');
+                        return result.data;
+                    } catch (cfError) {
+                        console.log("⚠️ Falló Cloud Functions, usando Firestore directamente:", cfError);
+                    }
+                }
                 
-                console.log("Respuesta de Cloud Function:", result);
-                showToast('Transacción agregada correctamente', 'success');
-                return result.data;
+                // Fallback a Firestore directo
+                return await this.addTransactionDirect(transactionData);
                 
             } catch (error) {
-                console.error('Error al agregar transacción via Cloud Function:', error);
-                
-                // Fallback: guardar directamente en Firestore si la función falla
-                console.log("Intentando guardar directamente en Firestore...");
-                return await this.addTransactionDirect(transactionData);
+                console.error('❌ Error al agregar transacción:', error);
+                showToast('Error al agregar transacción: ' + error.message, 'danger');
+                throw error;
             }
         }
 
-        // Fallback method para guardar directamente
+        // Método directo a Firestore
         async addTransactionDirect(transactionData) {
             try {
                 const user = firebase.auth().currentUser;
@@ -43,38 +61,44 @@ if (typeof TransactionManager === 'undefined') {
                 };
 
                 const result = await this.db.collection('transactions').add(transaction);
-                console.log("Transacción guardada directamente con ID:", result.id);
+                console.log("✅ Transacción guardada directamente con ID:", result.id);
                 
                 showToast('Transacción agregada correctamente', 'success');
                 return { success: true, id: result.id };
                 
-            } catch (directError) {
-                console.error('Error también en método directo:', directError);
-                showToast('Error: ' + directError.message, 'danger');
-                throw directError;
+            } catch (error) {
+                console.error('❌ Error en método directo:', error);
+                throw error;
             }
         }
 
         async getTransactions(filters = {}) {
             try {
-                console.log("Obteniendo transacciones via Cloud Function:", filters);
+                console.log("📊 Obteniendo transacciones con filtros:", filters);
                 
-                const getTransactionsFunction = this.functions.httpsCallable('getUserTransactions');
-                const result = await getTransactionsFunction(filters);
+                // Intentar usar Cloud Functions si está disponible
+                if (this.functions) {
+                    try {
+                        const getTransactionsFunction = this.functions.httpsCallable('getUserTransactions');
+                        const result = await getTransactionsFunction(filters);
+                        console.log(`✅ Se encontraron ${result.data.transactions.length} transacciones via Cloud Functions`);
+                        return result.data.transactions || [];
+                    } catch (cfError) {
+                        console.log("⚠️ Falló Cloud Functions, usando Firestore directamente:", cfError);
+                    }
+                }
                 
-                console.log("Transacciones desde Cloud Function:", result.data);
-                return result.data.transactions || [];
+                // Fallback a Firestore directo
+                return await this.getTransactionsDirect(filters);
                 
             } catch (error) {
-                console.error('Error al obtener transacciones via Cloud Function:', error);
-                
-                // Fallback: obtener directamente de Firestore
-                console.log("Intentando obtener directamente de Firestore...");
-                return await this.getTransactionsDirect(filters);
+                console.error('❌ Error al obtener transacciones:', error);
+                showToast('Error al cargar transacciones: ' + error.message, 'danger');
+                return [];
             }
         }
 
-        // Fallback method para obtener directamente
+        // Método directo a Firestore
         async getTransactionsDirect(filters = {}) {
             try {
                 const user = firebase.auth().currentUser;
@@ -109,23 +133,20 @@ if (typeof TransactionManager === 'undefined') {
                     ...doc.data()
                 }));
                 
-                console.log(`Se encontraron ${transactions.length} transacciones directamente`);
+                console.log(`✅ Se encontraron ${transactions.length} transacciones directamente`);
                 return transactions;
 
-            } catch (directError) {
-                console.error('Error también en método directo:', directError);
-                showToast('Error al cargar transacciones: ' + directError.message, 'danger');
-                return [];
+            } catch (error) {
+                console.error('❌ Error en método directo:', error);
+                throw error;
             }
         }
 
         async getDashboardData(month, year) {
             try {
-                console.log(`Obteniendo datos del dashboard para ${month}/${year}`);
+                console.log(`📈 Obteniendo datos del dashboard para ${month}/${year}`);
                 const transactions = await this.getTransactions({ month, year });
                 
-                console.log("Transacciones para dashboard:", transactions);
-
                 const totalIncome = transactions
                     .filter(t => t.type === 'income')
                     .reduce((sum, t) => sum + t.amount, 0);
@@ -133,8 +154,6 @@ if (typeof TransactionManager === 'undefined') {
                 const totalExpense = transactions
                     .filter(t => t.type === 'expense')
                     .reduce((sum, t) => sum + t.amount, 0);
-
-                console.log("Total ingresos:", totalIncome, "Total gastos:", totalExpense);
 
                 // Agrupar por categorías
                 const incomeByCategory = {};
@@ -164,22 +183,20 @@ if (typeof TransactionManager === 'undefined') {
                     }
                 };
 
-                console.log("Datos del dashboard:", result);
+                console.log("✅ Datos del dashboard calculados:", result);
                 return result;
                 
             } catch (error) {
-                console.error('Error en getDashboardData:', error);
+                console.error('❌ Error en getDashboardData:', error);
                 throw error;
             }
         }
 
         async getMonthlySummaries() {
             try {
-                console.log("Obteniendo resúmenes mensuales");
+                console.log("📅 Obteniendo resúmenes mensuales");
                 const transactions = await this.getTransactions({});
                 
-                console.log("Todas las transacciones para resumen mensual:", transactions);
-
                 // Agrupar por mes y año
                 const monthlyData = {};
                 transactions.forEach(transaction => {
@@ -212,11 +229,11 @@ if (typeof TransactionManager === 'undefined') {
                     return b.month - a.month;
                 });
 
-                console.log("Resúmenes mensuales:", result);
+                console.log("✅ Resúmenes mensuales calculados:", result);
                 return result;
 
             } catch (error) {
-                console.error('Error en getMonthlySummaries:', error);
+                console.error('❌ Error en getMonthlySummaries:', error);
                 return [];
             }
         }
@@ -229,7 +246,7 @@ if (typeof TransactionManager === 'undefined') {
     }
 
     window.transactionManager = new TransactionManager();
-    console.log("TransactionManager inicializado correctamente con Cloud Functions");
+    console.log("🚀 TransactionManager inicializado correctamente");
 } else {
-    console.log("TransactionManager ya estaba definido");
+    console.log("ℹ️ TransactionManager ya estaba definido");
 }
