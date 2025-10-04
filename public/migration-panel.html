@@ -17,6 +17,13 @@
         .alert {
             border-left: 4px solid;
         }
+        .hidden {
+            display: none !important;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -26,9 +33,28 @@
                 <h4 class="mb-0">🔄 Migrar Datos a Firebase</h4>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <strong>⚠️ Importante:</strong> Esta acción copiará todos tus datos locales a Firebase. 
-                    Los datos originales permanecerán intactos en tu servidor.
+                <!-- Estados de la aplicación -->
+                <div id="initMessage" class="alert alert-info">
+                    <strong>⏳ Inicializando...</strong> Cargando configuración de Firebase.
+                </div>
+
+                <div id="readyMessage" class="alert alert-success hidden">
+                    <strong>✅ Listo:</strong> Firebase inicializado correctamente. Inicia sesión para continuar.
+                </div>
+
+                <div id="authMessage" class="alert alert-warning hidden">
+                    <strong>🔐 Autenticación requerida:</strong> Por favor inicia sesión para migrar tus datos.
+                </div>
+
+                <div id="errorMessage" class="alert alert-danger hidden">
+                    <strong>❌ Error:</strong> <span id="errorText"></span>
+                </div>
+
+                <!-- Información de usuario -->
+                <div id="userInfo" class="hidden">
+                    <div class="alert alert-success">
+                        <strong>👤 Usuario:</strong> <span id="userEmail"></span>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -40,16 +66,24 @@
                     </ul>
                 </div>
 
+                <!-- Botones de acción -->
                 <div class="d-grid gap-2 mb-3">
-                    <button id="startMigrationBtn" class="btn btn-success btn-lg" onclick="startMigration()">
+                    <button id="startMigrationBtn" class="btn btn-success btn-lg hidden" disabled>
                         🚀 Iniciar Migración Completa
                     </button>
-                    <button id="checkDataBtn" class="btn btn-outline-primary" onclick="checkExistingData()">
+                    <button id="checkDataBtn" class="btn btn-outline-primary hidden" disabled>
                         🔍 Verificar Datos Existentes
+                    </button>
+                    <button id="loginBtn" class="btn btn-primary hidden">
+                        🔐 Iniciar Sesión
+                    </button>
+                    <button id="retryBtn" class="btn btn-warning hidden">
+                        🔄 Reintentar Conexión
                     </button>
                 </div>
 
-                <div id="migrationProgress" class="mt-4" style="display: none;">
+                <!-- Progreso de migración -->
+                <div id="migrationProgress" class="mt-4 hidden">
                     <h6>Progreso de Migración</h6>
                     <div class="progress mb-2">
                         <div id="migrationProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
@@ -58,7 +92,8 @@
                     <div id="migrationStatus" class="text-muted small">Preparando...</div>
                 </div>
 
-                <div id="results" class="mt-3" style="display: none;">
+                <!-- Resultados -->
+                <div id="results" class="mt-3 hidden">
                     <h6>Resultados</h6>
                     <div id="resultsContent"></div>
                 </div>
@@ -80,14 +115,48 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     
-    <!-- Tu configuración de Firebase -->
+    <!-- Configuración de Firebase -->
     <script src="/firebase-config.js"></script>
     
     <!-- Script de migración -->
     <script src="/migration.js"></script>
     
-    <!-- Funciones de utilidad -->
+    <!-- Controlador de la aplicación -->
     <script>
+        // Estado de la aplicación
+        let appState = {
+            firebaseReady: false,
+            userAuthenticated: false,
+            dataMigrator: null
+        };
+
+        // Elementos del DOM
+        const elements = {
+            initMessage: document.getElementById('initMessage'),
+            readyMessage: document.getElementById('readyMessage'),
+            authMessage: document.getElementById('authMessage'),
+            errorMessage: document.getElementById('errorMessage'),
+            errorText: document.getElementById('errorText'),
+            userInfo: document.getElementById('userInfo'),
+            userEmail: document.getElementById('userEmail'),
+            startMigrationBtn: document.getElementById('startMigrationBtn'),
+            checkDataBtn: document.getElementById('checkDataBtn'),
+            loginBtn: document.getElementById('loginBtn'),
+            retryBtn: document.getElementById('retryBtn'),
+            migrationProgress: document.getElementById('migrationProgress'),
+            results: document.getElementById('results'),
+            resultsContent: document.getElementById('resultsContent')
+        };
+
+        // Función para mostrar/ocultar elementos
+        function showElement(element) {
+            element.classList.remove('hidden');
+        }
+
+        function hideElement(element) {
+            element.classList.add('hidden');
+        }
+
         // Función para mostrar toasts
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toastContainer');
@@ -120,42 +189,179 @@
             });
         }
 
-        // Función para iniciar migración
-        async function startMigration() {
-            const btn = document.getElementById('startMigrationBtn');
-            const progress = document.getElementById('migrationProgress');
-            const results = document.getElementById('results');
+        // Inicializar la aplicación
+        function initializeApp() {
+            console.log("🚀 Inicializando aplicación...");
             
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Migrando...';
-            progress.style.display = 'block';
-            results.style.display = 'none';
+            // Resetear estado
+            hideElement(elements.readyMessage);
+            hideElement(elements.authMessage);
+            hideElement(elements.errorMessage);
+            hideElement(elements.userInfo);
+            showElement(elements.initMessage);
+
+            // Esperar a que Firebase esté listo
+            window.addEventListener('firebaseReady', onFirebaseReady);
+            window.addEventListener('firebaseError', onFirebaseError);
+        }
+
+        // Cuando Firebase esté listo
+        function onFirebaseReady() {
+            console.log("✅ Firebase listo en la aplicación");
+            appState.firebaseReady = true;
             
+            hideElement(elements.initMessage);
+            showElement(elements.readyMessage);
+            
+            // Inicializar el migrador
+            initializeMigrator();
+            
+            // Configurar autenticación
+            setupAuth();
+        }
+
+        // Error de Firebase
+        function onFirebaseError(event) {
+            console.error("❌ Error de Firebase:", event.detail);
+            hideElement(elements.initMessage);
+            showElement(elements.errorMessage);
+            elements.errorText.textContent = event.detail.message;
+            showElement(elements.retryBtn);
+        }
+
+        // Inicializar el migrador
+        function initializeMigrator() {
             try {
-                const results = await window.dataMigrator.startMigration();
-                showResults(results);
+                if (typeof BrowserDataMigrator !== 'undefined') {
+                    appState.dataMigrator = new BrowserDataMigrator();
+                    console.log("✅ DataMigrator inicializado");
+                } else {
+                    throw new Error("BrowserDataMigrator no está definido");
+                }
             } catch (error) {
-                console.error('Error en migración:', error);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '🚀 Iniciar Migración Completa';
+                console.error("❌ Error inicializando migrador:", error);
+                showToast("Error cargando herramientas de migración", "danger");
             }
         }
 
-        // Función para verificar datos existentes
-        async function checkExistingData() {
-            const result = await window.dataMigrator.checkExistingData();
-            if (result) {
-                const message = `Encontrados: ${result.transactionCount} transacciones, ${result.budgetCount} presupuestos`;
-                showToast(message, 'info');
-            }
+        // Configurar autenticación
+        function setupAuth() {
+            if (!appState.firebaseReady) return;
+
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    // Usuario autenticado
+                    onUserAuthenticated(user);
+                } else {
+                    // Usuario no autenticado
+                    onUserNotAuthenticated();
+                }
+            });
         }
 
-        // Función para mostrar resultados
-        function showResults(results) {
-            const resultsDiv = document.getElementById('results');
-            const resultsContent = document.getElementById('resultsContent');
+        // Usuario autenticado
+        function onUserAuthenticated(user) {
+            console.log("👤 Usuario autenticado:", user.email);
+            appState.userAuthenticated = true;
             
+            hideElement(elements.authMessage);
+            showElement(elements.userInfo);
+            elements.userEmail.textContent = user.email;
+            
+            // Habilitar botones
+            elements.startMigrationBtn.disabled = false;
+            elements.checkDataBtn.disabled = false;
+            showElement(elements.startMigrationBtn);
+            showElement(elements.checkDataBtn);
+            hideElement(elements.loginBtn);
+        }
+
+        // Usuario no autenticado
+        function onUserNotAuthenticated() {
+            console.log("👤 Usuario no autenticado");
+            appState.userAuthenticated = false;
+            
+            showElement(elements.authMessage);
+            hideElement(elements.userInfo);
+            
+            // Mostrar botón de login
+            elements.loginBtn.disabled = false;
+            showElement(elements.loginBtn);
+            hideElement(elements.startMigrationBtn);
+            hideElement(elements.checkDataBtn);
+        }
+
+        // Iniciar sesión
+        function setupLogin() {
+            elements.loginBtn.addEventListener('click', async () => {
+                try {
+                    // Usar autenticación con Google (puedes cambiar el proveedor)
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    await firebase.auth().signInWithPopup(provider);
+                    showToast("Sesión iniciada correctamente", "success");
+                } catch (error) {
+                    console.error("❌ Error iniciando sesión:", error);
+                    showToast("Error iniciando sesión: " + error.message, "danger");
+                }
+            });
+        }
+
+        // Iniciar migración
+        function setupMigration() {
+            elements.startMigrationBtn.addEventListener('click', async () => {
+                if (!appState.dataMigrator) {
+                    showToast("Migrador no inicializado", "danger");
+                    return;
+                }
+
+                elements.startMigrationBtn.disabled = true;
+                elements.startMigrationBtn.innerHTML = '⏳ Migrando...';
+                showElement(elements.migrationProgress);
+                hideElement(elements.results);
+
+                try {
+                    const results = await appState.dataMigrator.startMigration();
+                    showResults(results);
+                } catch (error) {
+                    console.error('Error en migración:', error);
+                    showToast('Error en migración: ' + error.message, 'danger');
+                } finally {
+                    elements.startMigrationBtn.disabled = false;
+                    elements.startMigrationBtn.innerHTML = '🚀 Iniciar Migración Completa';
+                }
+            });
+        }
+
+        // Verificar datos existentes
+        function setupDataCheck() {
+            elements.checkDataBtn.addEventListener('click', async () => {
+                if (!appState.dataMigrator) {
+                    showToast("Migrador no inicializado", "danger");
+                    return;
+                }
+
+                try {
+                    const result = await appState.dataMigrator.checkExistingData();
+                    if (result) {
+                        const message = `Encontrados: ${result.transactionCount} transacciones, ${result.budgetCount} presupuestos`;
+                        showToast(message, 'info');
+                    }
+                } catch (error) {
+                    console.error('Error verificando datos:', error);
+                    showToast('Error verificando datos: ' + error.message, 'danger');
+                }
+            });
+        }
+
+        // Reintentar conexión
+        function setupRetry() {
+            elements.retryBtn.addEventListener('click', () => {
+                location.reload();
+            });
+        }
+
+        // Mostrar resultados
+        function showResults(results) {
             const html = `
                 <div class="alert alert-success">
                     <h6>✅ Migración Completada</h6>
@@ -165,13 +371,22 @@
                 </div>
             `;
             
-            resultsContent.innerHTML = html;
-            resultsDiv.style.display = 'block';
+            elements.resultsContent.innerHTML = html;
+            showElement(elements.results);
         }
 
         // Inicializar cuando la página cargue
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('✅ Panel de migración listo');
+            console.log('✅ Página cargada, inicializando aplicación...');
+            
+            // Configurar event listeners
+            setupLogin();
+            setupMigration();
+            setupDataCheck();
+            setupRetry();
+            
+            // Iniciar la aplicación
+            initializeApp();
         });
     </script>
 </body>
