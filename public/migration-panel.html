@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migración de Datos - Finanzas Personales</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .migration-card {
+            max-width: 600px;
+            margin: 2rem auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .progress {
+            height: 25px;
+        }
+        .alert {
+            border-left: 4px solid;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="migration-card card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">🔄 Migrar Datos a Firebase</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>⚠️ Importante:</strong> Esta acción copiará todos tus datos locales a Firebase. 
+                    Los datos originales permanecerán intactos en tu servidor.
+                </div>
+
+                <div class="mb-3">
+                    <h6>¿Qué se migrará?</h6>
+                    <ul>
+                        <li>📊 Todas tus transacciones</li>
+                        <li>💰 Todos tus presupuestos</li>
+                        <li>👤 Tu información de usuario</li>
+                    </ul>
+                </div>
+
+                <div class="d-grid gap-2 mb-3">
+                    <button id="startMigrationBtn" class="btn btn-success btn-lg" onclick="startMigration()">
+                        🚀 Iniciar Migración Completa
+                    </button>
+                    <button id="checkDataBtn" class="btn btn-outline-primary" onclick="checkExistingData()">
+                        🔍 Verificar Datos Existentes
+                    </button>
+                </div>
+
+                <div id="migrationProgress" class="mt-4" style="display: none;">
+                    <h6>Progreso de Migración</h6>
+                    <div class="progress mb-2">
+                        <div id="migrationProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                    <div id="migrationStatus" class="text-muted small">Preparando...</div>
+                </div>
+
+                <div id="results" class="mt-3" style="display: none;">
+                    <h6>Resultados</h6>
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                <small>Esta operación puede tomar varios minutos dependiendo de la cantidad de datos.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- Tu configuración de Firebase -->
+    <script src="/firebase-config.js"></script>
+    
+    <!-- Script de migración -->
+    <script src="/migration.js"></script>
+    
+    <!-- Funciones de utilidad -->
+    <script>
+        // Función para mostrar toasts
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const bgClass = {
+                'success': 'bg-success',
+                'danger': 'bg-danger',
+                'warning': 'bg-warning',
+                'info': 'bg-info'
+            }[type] || 'bg-info';
+            
+            const toastHTML = `
+                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+            
+            // Remover el toast después de que se oculte
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // Función para iniciar migración
+        async function startMigration() {
+            const btn = document.getElementById('startMigrationBtn');
+            const progress = document.getElementById('migrationProgress');
+            const results = document.getElementById('results');
+            
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Migrando...';
+            progress.style.display = 'block';
+            results.style.display = 'none';
+            
+            try {
+                const results = await window.dataMigrator.startMigration();
+                showResults(results);
+            } catch (error) {
+                console.error('Error en migración:', error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Iniciar Migración Completa';
+            }
+        }
+
+        // Función para verificar datos existentes
+        async function checkExistingData() {
+            const result = await window.dataMigrator.checkExistingData();
+            if (result) {
+                const message = `Encontrados: ${result.transactionCount} transacciones, ${result.budgetCount} presupuestos`;
+                showToast(message, 'info');
+            }
+        }
+
+        // Función para mostrar resultados
+        function showResults(results) {
+            const resultsDiv = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            const html = `
+                <div class="alert alert-success">
+                    <h6>✅ Migración Completada</h6>
+                    <p><strong>Tiempo:</strong> ${results.duration} segundos</p>
+                    <p><strong>Transacciones:</strong> ${results.transactions.successCount} migradas, ${results.transactions.errorCount} errores</p>
+                    <p><strong>Presupuestos:</strong> ${results.budgets.successCount} migrados, ${results.budgets.errorCount} errores</p>
+                </div>
+            `;
+            
+            resultsContent.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+
+        // Inicializar cuando la página cargue
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Panel de migración listo');
+        });
+    </script>
+</body>
+</html>
