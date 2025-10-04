@@ -1,4 +1,4 @@
-// Firebase Configuration - CONFIGURACIÓN COMPLETA
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyBwitPnia6EEHpfWhQyZ2bXqDkLdamsC-4",
     authDomain: "finanzas-personales-torotech83.firebaseapp.com",
@@ -9,13 +9,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-try {
-    firebase.initializeApp(firebaseConfig);
-    console.log("Firebase configurado correctamente");
-} catch (error) {
-    console.error("Error inicializando Firebase:", error);
-}
+firebase.initializeApp(firebaseConfig);
 
 // Initialize services
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+console.log("Firebase configurado correctamente");

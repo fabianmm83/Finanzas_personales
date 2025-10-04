@@ -1,4 +1,4 @@
-// app.js - VERSIÓN SIMPLIFICADA Y FUNCIONAL
+// app.js - Aplicación principal
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM cargado - Iniciando aplicación");
     initializeApp();
@@ -140,6 +140,9 @@ function loadDashboard(user) {
                                     <button class="btn btn-outline-success" onclick="showAddBudget()">
                                         <i class="fas fa-chart-pie me-2"></i>Crear Presupuesto
                                     </button>
+                                    <button class="btn btn-outline-info" onclick="showProfile()">
+                                        <i class="fas fa-user me-2"></i>Mi Perfil
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -153,6 +156,11 @@ function loadDashboard(user) {
                                     Últimas Transacciones
                                 </h5>
                                 <p class="text-muted text-center">No hay transacciones recientes</p>
+                                <div class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="showAddTransaction()">
+                                        Agregar primera transacción
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -169,10 +177,16 @@ function showAddTransaction() {
             <div class="col-md-8 col-lg-6">
                 <div class="card shadow">
                     <div class="card-body">
-                        <h2 class="text-center mb-4">
-                            <i class="fas fa-plus-circle text-primary me-2"></i>
-                            Agregar Transacción
-                        </h2>
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">
+                                <i class="fas fa-plus-circle text-primary me-2"></i>
+                                Agregar Transacción
+                            </h2>
+                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                        
                         <form id="add-transaction-form">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -189,7 +203,7 @@ function showAddTransaction() {
                             </div>
                             <div class="mb-3">
                                 <label for="transaction-category" class="form-label">Categoría</label>
-                                <input type="text" class="form-control" id="transaction-category" required>
+                                <input type="text" class="form-control" id="transaction-category" placeholder="Ej: Salario, Comida, Transporte..." required>
                             </div>
                             <div class="mb-3">
                                 <label for="transaction-date" class="form-label">Fecha</label>
@@ -197,14 +211,11 @@ function showAddTransaction() {
                             </div>
                             <div class="mb-3">
                                 <label for="transaction-description" class="form-label">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="transaction-description" rows="2"></textarea>
+                                <textarea class="form-control" id="transaction-description" rows="2" placeholder="Descripción adicional..."></textarea>
                             </div>
-                            <div class="d-grid gap-2">
+                            <div class="d-grid">
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="fas fa-save me-2"></i>Guardar Transacción
-                                </button>
-                                <button type="button" class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
-                                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
                                 </button>
                             </div>
                         </form>
@@ -256,17 +267,23 @@ function showAddBudget() {
             <div class="col-md-8 col-lg-6">
                 <div class="card shadow">
                     <div class="card-body">
-                        <h2 class="text-center mb-4">
-                            <i class="fas fa-chart-pie text-primary me-2"></i>
-                            Crear Presupuesto
-                        </h2>
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">
+                                <i class="fas fa-chart-pie text-primary me-2"></i>
+                                Crear Presupuesto
+                            </h2>
+                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                        
                         <form id="add-budget-form">
                             <div class="mb-3">
                                 <label for="budget-category" class="form-label">Categoría</label>
-                                <input type="text" class="form-control" id="budget-category" required>
+                                <input type="text" class="form-control" id="budget-category" placeholder="Ej: Comida, Transporte, Entretenimiento..." required>
                             </div>
                             <div class="mb-3">
-                                <label for="budget-limit" class="form-label">Límite ($)</label>
+                                <label for="budget-limit" class="form-label">Límite Mensual ($)</label>
                                 <input type="number" step="0.01" class="form-control" id="budget-limit" required>
                             </div>
                             <div class="row">
@@ -286,12 +303,9 @@ function showAddBudget() {
                                            value="${currentYear}" min="${currentYear}" max="${currentYear + 5}" required>
                                 </div>
                             </div>
-                            <div class="d-grid gap-2">
+                            <div class="d-grid">
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="fas fa-save me-2"></i>Crear Presupuesto
-                                </button>
-                                <button type="button" class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
-                                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
                                 </button>
                             </div>
                         </form>
@@ -328,11 +342,93 @@ function showAddBudget() {
     });
 }
 
+function showProfile() {
+    const user = auth.currentUser;
+    const content = document.getElementById('content');
+    
+    content.innerHTML = `
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">
+                                <i class="fas fa-user-circle text-primary me-2"></i>
+                                Mi Perfil
+                            </h2>
+                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
+                                <h4>${user.email}</h4>
+                                <p class="text-muted">Usuario</p>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h5>Transacciones</h5>
+                                                <p class="h3 text-primary">0</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h5>Presupuestos</h5>
+                                                <p class="h3 text-success">0</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// FUNCIONES UTILITARIAS - AGREGA ESTO AL FINAL
+
 function showLoading(show) {
     const loadingSpinner = document.getElementById('loading-spinner');
     if (loadingSpinner) {
         loadingSpinner.style.display = show ? 'block' : 'none';
     }
+}
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    const toastId = 'toast-' + Date.now();
+    
+    const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    toastContainer.innerHTML += toastHTML;
+    
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Remover el toast del DOM después de que se oculte
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
 }
 
 function showError(message) {
