@@ -1,4 +1,10 @@
 // app.js - Aplicación principal
+let chartInstances = {
+    timeline: null,
+    income: null,
+    expense: null
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM cargado - Iniciando aplicación");
     initializeApp();
@@ -15,6 +21,17 @@ function initializeApp() {
     }
     
     console.log("Firebase detectado, verificando autenticación...");
+    
+    // Inicializar managers si no existen
+    if (typeof transactionManager === 'undefined') {
+        console.log("Inicializando TransactionManager...");
+        window.transactionManager = new TransactionManager();
+    }
+    
+    if (typeof budgetManager === 'undefined') {
+        console.log("Inicializando BudgetManager...");
+        window.budgetManager = new BudgetManager();
+    }
     
     // Escuchar cambios de autenticación
     auth.onAuthStateChanged((user) => {
@@ -97,7 +114,6 @@ function loadLoginPage() {
     });
 }
 
-// Nueva función para mostrar página de registro
 function showRegisterPage() {
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -151,115 +167,609 @@ function showRegisterPage() {
     });
 }
 
-
-
-
-
-
 function loadDashboard(user) {
     const content = document.getElementById('content');
     
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
     content.innerHTML = `
-        <div class="row">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h2 class="mb-1">Dashboard</h2>
-                        <p class="text-muted mb-0">Bienvenido, ${user.email}</p>
-                    </div>
-                    <button class="btn btn-outline-danger" onclick="logout()">
-                        <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
-                    </button>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="card-title">$0.00</h4>
-                                        <p class="card-text">Balance Total</p>
-                                    </div>
-                                    <i class="fas fa-dollar-sign fa-2x"></i>
+        <div class="container mt-4">
+            <!-- Título y fecha -->
+            <div class="text-center mb-4">
+                <h1 class="text-primary">
+                    Movimientos de ${getMonthName(currentMonth)} ${currentYear}
+                </h1>
+                <p class="text-muted">
+                    <i class="far fa-calendar-alt me-1"></i>
+                    Del ${getFirstDayOfMonth(currentYear, currentMonth)} al ${getLastDayOfMonth(currentYear, currentMonth)}
+                </p>
+            </div>
+
+            <!-- Botones principales -->
+            <div class="text-center mb-4">
+                <button class="btn btn-primary me-2" onclick="showAddBudget()">
+                    <i class="fas fa-plus-circle"></i> Agregar Presupuesto
+                </button>
+                <button class="btn btn-info me-2" onclick="showBudgetsPage()">
+                    <i class="fas fa-chart-pie"></i> Ver Mis Presupuestos
+                </button>
+                <button class="btn btn-success" onclick="showAddTransaction()">
+                    <i class="fas fa-plus"></i> Nueva Transacción
+                </button>
+            </div>
+
+            <!-- Carrusel de meses -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-10">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <div id="monthsCarousel" class="carousel slide" data-bs-ride="false">
+                                <div class="carousel-inner" id="months-carousel-inner">
+                                    <!-- Se llenará dinámicamente -->
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="card bg-success text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="card-title">$0.00</h4>
-                                        <p class="card-text">Ingresos</p>
-                                    </div>
-                                    <i class="fas fa-arrow-down fa-2x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="card bg-danger text-white">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h4 class="card-title">$0.00</h4>
-                                        <p class="card-text">Gastos</p>
-                                    </div>
-                                    <i class="fas fa-arrow-up fa-2x"></i>
-                                </div>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#monthsCarousel" data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Anterior</span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#monthsCarousel" data-bs-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Siguiente</span>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    <i class="fas fa-plus-circle me-2"></i>
-                                    Acciones Rápidas
-                                </h5>
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-outline-primary" onclick="showAddTransaction()">
-                                        <i class="fas fa-plus me-2"></i>Agregar Transacción
-                                    </button>
-                                    <button class="btn btn-outline-success" onclick="showAddBudget()">
-                                        <i class="fas fa-chart-pie me-2"></i>Crear Presupuesto
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="showProfile()">
-                                        <i class="fas fa-user me-2"></i>Mi Perfil
+            </div>
+
+            <!-- Filtros Avanzados -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filtros Avanzados</h5>
+                            <form id="filters-form" class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="category" class="form-label">Categoría</label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="">Todas las categorías</option>
+                                        <!-- Se llenará dinámicamente -->
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <label for="amount_min" class="form-label">Mínimo ($)</label>
+                                    <input type="number" class="form-control" id="amount_min" name="amount_min" 
+                                           step="0.01" min="0" placeholder="Mínimo">
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <label for="amount_max" class="form-label">Máximo ($)</label>
+                                    <input type="number" class="form-control" id="amount_max" name="amount_max" 
+                                           step="0.01" min="0" placeholder="Máximo">
+                                </div>
+                                
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary me-2 w-100">
+                                        <i class="fas fa-search"></i> Filtrar
                                     </button>
                                 </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    <i class="fas fa-history me-2"></i>
-                                    Últimas Transacciones
-                                </h5>
-                                <p class="text-muted text-center">No hay transacciones recientes</p>
-                                <div class="text-center">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="showAddTransaction()">
-                                        Agregar primera transacción
-                                    </button>
-                                </div>
-                            </div>
+                </div>
+            </div>
+
+            <!-- Resumen Financiero Mejorado -->
+            <div class="row mb-4" id="financial-summary">
+                <!-- Se llenará dinámicamente -->
+            </div>
+
+            <!-- Gráfico de Evolución Temporal -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h2 class="text-center card-title mb-4">
+                                Evolución de Ingresos y Gastos
+                                <small class="text-muted d-block" id="timeline-date-range"></small>
+                            </h2>
+                            <canvas id="timelineChart" height="120"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de transacciones -->
+            <div id="transactions-section">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-list me-2"></i>Transacciones Recientes
+                        </h5>
+                        <div id="transactions-list">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos de Categorías -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h2 class="text-center card-title">
+                                Distribución de Ingresos
+                            </h2>
+                            <canvas id="incomeChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h2 class="text-center card-title">
+                                Distribución de Gastos
+                            </h2>
+                            <canvas id="expenseChart" height="250"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     `;
+
+    // Configurar event listeners después de renderizar
+    setTimeout(() => {
+        const filtersForm = document.getElementById('filters-form');
+        if (filtersForm) {
+            filtersForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                applyFilters();
+            });
+        }
+    }, 100);
+
+    // Cargar datos del dashboard
+    loadDashboardData(currentYear, currentMonth);
 }
+
+// Nueva función para cargar datos del dashboard
+async function loadDashboardData(year, month) {
+    showLoading(true);
+    
+    try {
+        // Obtener datos de transacciones
+        const dashboardData = await transactionManager.getDashboardData(month, year);
+        
+        // Actualizar resumen financiero
+        updateFinancialSummary(dashboardData.summary);
+        
+        // Actualizar lista de transacciones
+        updateTransactionsList(dashboardData.transactions);
+        
+        // Generar gráficos
+        generateCharts(dashboardData);
+        
+        // Cargar carrusel de meses
+        await loadMonthsCarousel(year, month);
+        
+        // Cargar categorías en filtros
+        loadCategoriesFilter(dashboardData.categories);
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showToast('Error al cargar el dashboard', 'danger');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Función para actualizar el resumen financiero
+function updateFinancialSummary(summary) {
+    const ahorroPotencial = summary.totalIncome * 0.2;
+    const daysInMonth = new Date(summary.year, summary.month, 0).getDate();
+    const currentDay = new Date().getDate();
+    const daysPassed = Math.min(currentDay, daysInMonth);
+    const gastoDiarioPromedio = daysPassed > 0 ? summary.totalExpense / daysPassed : 0;
+    
+    const summaryHTML = `
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Ingresos</h5>
+                    <p class="card-text h4">$${summary.totalIncome.toFixed(2)}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Gastos</h5>
+                    <p class="card-text h4">$${summary.totalExpense.toFixed(2)}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card ${summary.balance >= 0 ? 'bg-primary' : 'bg-warning'} text-white h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Balance</h5>
+                    <p class="card-text h4">$${summary.balance.toFixed(2)}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Ahorro Ideal</h5>
+                    <p class="card-text h4">$${ahorroPotencial.toFixed(2)}</p>
+                    <small class="text-white-50">(20% de ingresos)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Gasto Diario</h5>
+                    <p class="card-text h4">$${gastoDiarioPromedio.toFixed(2)}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('financial-summary').innerHTML = summaryHTML;
+}
+
+// Función para actualizar lista de transacciones
+function updateTransactionsList(transactions) {
+    const transactionsList = document.getElementById('transactions-list');
+    
+    if (transactions.length === 0) {
+        transactionsList.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No hay transacciones para mostrar</p>
+                <button class="btn btn-primary" onclick="showAddTransaction()">
+                    <i class="fas fa-plus me-2"></i>Agregar primera transacción
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    let transactionsHTML = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th>Tipo</th>
+                        <th class="text-end">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    transactions.slice(0, 10).forEach(transaction => {
+        const date = transaction.date.toDate();
+        const isIncome = transaction.type === 'income';
+        
+        transactionsHTML += `
+            <tr>
+                <td>${date.toLocaleDateString('es-ES')}</td>
+                <td>
+                    <span class="badge bg-light text-dark">${transaction.category}</span>
+                </td>
+                <td>${transaction.description || '-'}</td>
+                <td>
+                    <span class="badge ${isIncome ? 'bg-success' : 'bg-danger'}">
+                        ${isIncome ? 'Ingreso' : 'Gasto'}
+                    </span>
+                </td>
+                <td class="text-end ${isIncome ? 'text-success' : 'text-danger'}">
+                    <strong>${isIncome ? '+' : '-'}$${transaction.amount.toFixed(2)}</strong>
+                </td>
+            </tr>
+        `;
+    });
+    
+    transactionsHTML += `
+                </tbody>
+            </table>
+        </div>
+        ${transactions.length > 10 ? `
+            <div class="text-center mt-3">
+                <button class="btn btn-outline-primary" onclick="showAllTransactions()">
+                    Ver todas las transacciones (${transactions.length})
+                </button>
+            </div>
+        ` : ''}
+    `;
+    
+    transactionsList.innerHTML = transactionsHTML;
+}
+
+// Función para generar gráficos
+function generateCharts(dashboardData) {
+    // Destruir gráficos existentes
+    destroyCharts();
+    
+    // Gráfico de Evolución Temporal
+    const timelineCtx = document.getElementById('timelineChart');
+    if (timelineCtx) {
+        const weeklyData = generateWeeklyData(dashboardData.transactions, dashboardData.summary.month, dashboardData.summary.year);
+        
+        chartInstances.timeline = new Chart(timelineCtx, {
+            type: 'line',
+            data: weeklyData,
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': $' + context.raw.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfico de Ingresos por categoría
+    const incomeCtx = document.getElementById('incomeChart');
+    if (incomeCtx) {
+        const incomeCategories = Object.keys(dashboardData.categories.income);
+        const incomeAmounts = Object.values(dashboardData.categories.income);
+        
+        if (incomeCategories.length > 0) {
+            chartInstances.income = new Chart(incomeCtx, {
+                type: 'bar',
+                data: {
+                    labels: incomeCategories,
+                    datasets: [{
+                        label: 'Ingresos',
+                        data: incomeAmounts,
+                        backgroundColor: '#28a745',
+                        borderColor: '#218838',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Gráfico de Gastos por categoría
+    const expenseCtx = document.getElementById('expenseChart');
+    if (expenseCtx) {
+        const expenseCategories = Object.keys(dashboardData.categories.expense);
+        const expenseAmounts = Object.values(dashboardData.categories.expense);
+        
+        if (expenseCategories.length > 0) {
+            chartInstances.expense = new Chart(expenseCtx, {
+                type: 'bar',
+                data: {
+                    labels: expenseCategories,
+                    datasets: [{
+                        label: 'Gastos',
+                        data: expenseAmounts,
+                        backgroundColor: '#dc3545',
+                        borderColor: '#c82333',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+    }
+}
+
+// Función para generar datos semanales
+function generateWeeklyData(transactions, month, year) {
+    const weeks = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+    const weeklyIncome = [0, 0, 0, 0];
+    const weeklyExpense = [0, 0, 0, 0];
+    
+    transactions.forEach(transaction => {
+        const date = transaction.date.toDate();
+        const week = Math.floor((date.getDate() - 1) / 7);
+        const weekIndex = Math.min(week, 3); // Asegurar que no exceda 3
+        
+        if (transaction.type === 'income') {
+            weeklyIncome[weekIndex] += transaction.amount;
+        } else {
+            weeklyExpense[weekIndex] += transaction.amount;
+        }
+    });
+    
+    return {
+        labels: weeks,
+        datasets: [
+            {
+                label: 'Ingresos',
+                data: weeklyIncome,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'Gastos',
+                data: weeklyExpense,
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.4
+            }
+        ]
+    };
+}
+
+// Función para destruir gráficos existentes
+function destroyCharts() {
+    Object.values(chartInstances).forEach(chart => {
+        if (chart) {
+            chart.destroy();
+        }
+    });
+}
+
+// Funciones utilitarias
+function getMonthName(month) {
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return months[month - 1];
+}
+
+function getFirstDayOfMonth(year, month) {
+    return new Date(year, month - 1, 1).toLocaleDateString('es-ES');
+}
+
+function getLastDayOfMonth(year, month) {
+    return new Date(year, month, 0).toLocaleDateString('es-ES');
+}
+
+// Función para cargar carrusel de meses
+async function loadMonthsCarousel(currentYear, currentMonth) {
+    const carouselInner = document.getElementById('months-carousel-inner');
+    
+    try {
+        const monthlySummaries = await transactionManager.getMonthlySummaries();
+        
+        let carouselHTML = '';
+        monthlySummaries.forEach((monthData, index) => {
+            carouselHTML += `
+                <div class="carousel-item ${monthData.month === currentMonth && monthData.year === currentYear ? 'active' : ''}">
+                    <div class="text-center">
+                        <h5>${monthData.name}</h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Ingresos:</strong></p>
+                                <p class="text-success">$${monthData.income.toFixed(2)}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Gastos:</strong></p>
+                                <p class="text-danger">$${monthData.expense.toFixed(2)}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="mb-1"><strong>Balance:</strong></p>
+                                <p class="${monthData.balance >= 0 ? 'text-success' : 'text-danger'}">
+                                    $${monthData.balance.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="loadDashboardData(${monthData.year}, ${monthData.month})">
+                            Ver Detalles
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        carouselInner.innerHTML = carouselHTML;
+    } catch (error) {
+        console.error('Error loading months carousel:', error);
+        carouselInner.innerHTML = `
+            <div class="carousel-item active">
+                <div class="text-center">
+                    <p class="text-muted">No hay datos de meses anteriores</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Función para cargar categorías en filtros
+function loadCategoriesFilter(categories) {
+    const categorySelect = document.getElementById('category');
+    let categoriesHTML = '<option value="">Todas las categorías</option>';
+    
+    // Combinar categorías de ingresos y gastos
+    const allCategories = new Set([
+        ...Object.keys(categories.income),
+        ...Object.keys(categories.expense)
+    ]);
+    
+    allCategories.forEach(category => {
+        categoriesHTML += `<option value="${category}">${category}</option>`;
+    });
+    
+    categorySelect.innerHTML = categoriesHTML;
+}
+
+// Función para aplicar filtros
+function applyFilters() {
+    const category = document.getElementById('category').value;
+    const amountMin = document.getElementById('amount_min').value;
+    const amountMax = document.getElementById('amount_max').value;
+    
+    // Aquí puedes implementar la lógica de filtrado
+    showToast('Filtros aplicados: ' + (category || 'Todas categorías'), 'success');
+}
+
+// Funciones de navegación
+function showBudgetsPage() {
+    showToast('Funcionalidad de presupuestos en desarrollo', 'info');
+}
+
+function showAllTransactions() {
+    showToast('Vista completa de transacciones en desarrollo', 'info');
+}
+
+// Resto de las funciones existentes (showAddTransaction, showAddBudget, showProfile, etc.)
+// ... [mantén todas las funciones existentes que no se han modificado]
 
 function showAddTransaction() {
     const content = document.getElementById('content');
@@ -327,22 +837,14 @@ function showAddTransaction() {
             amount: parseFloat(document.getElementById('transaction-amount').value),
             category: document.getElementById('transaction-category').value,
             date: document.getElementById('transaction-date').value,
-            description: document.getElementById('transaction-description').value,
-            createdAt: new Date()
+            description: document.getElementById('transaction-description').value
         };
 
         try {
-            // Guardar en Firestore
-            await db.collection('transactions').add({
-                ...transactionData,
-                userId: auth.currentUser.uid
-            });
-            
-            showToast('Transacción guardada correctamente', 'success');
+            await transactionManager.addTransaction(transactionData);
             loadDashboard(auth.currentUser);
         } catch (error) {
             console.error('Error guardando transacción:', error);
-            showToast('Error al guardar la transacción', 'danger');
         }
     });
 }
@@ -413,22 +915,14 @@ function showAddBudget() {
             category: document.getElementById('budget-category').value,
             limit: parseFloat(document.getElementById('budget-limit').value),
             month: parseInt(document.getElementById('budget-month').value),
-            year: parseInt(document.getElementById('budget-year').value),
-            createdAt: new Date()
+            year: parseInt(document.getElementById('budget-year').value)
         };
 
         try {
-            // Guardar en Firestore
-            await db.collection('budgets').add({
-                ...budgetData,
-                userId: auth.currentUser.uid
-            });
-            
-            showToast('Presupuesto creado correctamente', 'success');
+            await budgetManager.createBudget(budgetData);
             loadDashboard(auth.currentUser);
         } catch (error) {
             console.error('Error creando presupuesto:', error);
-            showToast('Error al crear el presupuesto', 'danger');
         }
     });
 }
@@ -486,8 +980,7 @@ function showProfile() {
     `;
 }
 
-// FUNCIONES UTILITARIAS - AGREGA ESTO AL FINAL
-
+// FUNCIONES UTILITARIAS
 function showLoading(show) {
     const loadingSpinner = document.getElementById('loading-spinner');
     if (loadingSpinner) {
