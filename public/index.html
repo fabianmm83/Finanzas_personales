@@ -21,21 +21,31 @@
             background-color: #f8f9fa;
             color: #333;
             line-height: 1.6;
+            padding-top: 80px; /* Para la navbar fija */
         }
         
         .navbar {
             background: linear-gradient(135deg, var(--dark-color), #34495e);
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
         }
         
         .navbar-brand {
             font-weight: 700;
             font-size: 1.5rem;
+            display: flex;
+            align-items: center;
         }
         
         .logo-img {
             height: 40px;
+            width: auto;
             margin-right: 10px;
+            object-fit: contain;
         }
         
         .card {
@@ -65,9 +75,63 @@
         
         .toast-container {
             position: fixed;
-            top: 20px;
+            top: 90px;
             right: 20px;
             z-index: 9999;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 70px;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+            
+            .logo-img {
+                height: 30px;
+            }
+            
+            .container {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+            
+            .btn {
+                font-size: 0.9rem;
+                padding: 6px 12px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .navbar-brand span {
+                display: none; /* Ocultar texto en móviles muy pequeños */
+            }
+            
+            .logo-img {
+                margin-right: 0;
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.5rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Mejoras para móviles */
+        .table-responsive {
+            font-size: 0.9rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        /* Asegurar que los inputs sean legibles en móviles */
+        .form-control, .form-select {
+            font-size: 16px; /* Previene zoom en iOS */
         }
     </style>
 </head>
@@ -76,13 +140,44 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <img src="/static/logo_torotech1.png" alt="Logo ToroTech" class="logo-img">
-                Finanzas Personales
+                <img src="/static/logo_torotech1.webp" alt="Logo ToroTech" class="logo-img" onerror="this.style.display='none'">
+                <span>Finanzas Personales</span>
             </a>
-            <div class="navbar-nav ms-auto">
-                <div id="nav-auth-buttons">
-                    <!-- Se llenará dinámicamente -->
-                </div>
+            
+            <!-- Botón hamburguesa para móviles -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Menú de navegación -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-home">
+                            <i class="fas fa-home"></i> Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-profile">
+                            <i class="fas fa-user"></i> Perfil
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-add-transaction">
+                            <i class="fas fa-plus-circle"></i> Añadir Transacción
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-logout" style="display: none;">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="nav-login" style="display: none;">
+                            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -113,7 +208,7 @@
         </div>
     </footer>
 
-    <!-- Firebase SDK - AGREGAR FUNCTIONS -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -128,5 +223,32 @@
     <script src="/js/transactions.js"></script>
     <script src="/js/budgets.js"></script>
     <script src="/js/app.js"></script>
+    
+    <script>
+        // Script para manejar el logo y errores de imagen
+        document.addEventListener('DOMContentLoaded', function() {
+            const logo = document.querySelector('.logo-img');
+            if (logo) {
+                logo.onerror = function() {
+                    console.log('❌ Logo no encontrado en /static/logo_torotech1.webp');
+                    this.style.display = 'none';
+                };
+                logo.onload = function() {
+                    console.log('✅ Logo cargado correctamente');
+                };
+            }
+            
+            // Verificar que todos los elementos del navbar existen
+            const navElements = [
+                'nav-home', 'nav-profile', 'nav-add-transaction', 
+                'nav-logout', 'nav-login'
+            ];
+            
+            navElements.forEach(id => {
+                const element = document.getElementById(id);
+                console.log(`Nav element ${id}:`, element ? '✅' : '❌');
+            });
+        });
+    </script>
 </body>
 </html>
