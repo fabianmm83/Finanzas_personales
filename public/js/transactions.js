@@ -98,49 +98,118 @@ if (typeof TransactionManager === 'undefined') {
             }
         }
 
-        // Método directo a Firestore
-        async getTransactionsDirect(filters = {}) {
-            try {
-                const user = firebase.auth().currentUser;
-                if (!user) {
-                    console.log("Usuario no autenticado");
-                    return [];
-                }
 
-                let query = this.db.collection('transactions')
-                    .where('userId', '==', user.uid);
 
-                // Aplicar filtros
-                if (filters.month && filters.year) {
-                    const startDate = new Date(filters.year, filters.month - 1, 1);
-                    const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
-                    
-                    query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
-                                .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
-                }
 
-                if (filters.type) {
-                    query = query.where('type', '==', filters.type);
-                }
-
-                if (filters.category) {
-                    query = query.where('category', '==', filters.category);
-                }
-
-                const snapshot = await query.orderBy('date', 'desc').get();
-                const transactions = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                
-                console.log(`✅ Se encontraron ${transactions.length} transacciones directamente`);
-                return transactions;
-
-            } catch (error) {
-                console.error('❌ Error en método directo:', error);
-                throw error;
-            }
+        processTransactionDate(transaction) {
+    try {
+        if (transaction.date && typeof transaction.date.toDate === 'function') {
+            return transaction.date.toDate();
+        } else if (transaction.date && transaction.date.seconds) {
+            return new Date(transaction.date.seconds * 1000);
+        } else if (transaction.date) {
+            return new Date(transaction.date);
+        } else {
+            return new Date();
         }
+    } catch (error) {
+        console.error('Error procesando fecha:', error, transaction);
+        return new Date();
+    }
+}
+
+
+
+        async getTransactionsDirect(filters = {}) {
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            console.log("Usuario no autenticado");
+            return [];
+        }
+
+        let query = this.db.collection('transactions')
+            .where('userId', '==', user.uid);
+
+        // Aplicar filtros
+        if (filters.month && filters.year) {
+            const startDate = new Date(filters.year, filters.month - 1, 1);
+            const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
+            
+            query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+                        .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+        }
+
+        if (filters.type) {
+            query = query.where('type', '==', filters.type);
+        }
+
+        if (filters.category) {
+            query = query.where('category', '==', filters.category);
+        }
+
+        const snapshot = await query.orderBy('date', 'desc').get();
+        const transactions = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // CORRECCIÓN: Procesar la fecha aquí
+                date: this.processTransactionDate(data)
+            };
+        });
+        
+        console.log(`✅ Se encontraron ${transactions.length} transacciones directamente`);
+        return transactions;
+
+    } catch (error) {
+        console.error('❌ Error en método directo:', error);
+        throw error;
+    }
+}
+
+
+
+
+async updateTransaction(transactionId, transactionData) {
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) throw new Error('Usuario no autenticado');
+
+        const updates = {
+            type: transactionData.type,
+            category: transactionData.category,
+            amount: parseFloat(transactionData.amount),
+            date: firebase.firestore.Timestamp.fromDate(new Date(transactionData.date)),
+            description: transactionData.description || '',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await this.db.collection('transactions').doc(transactionId).update(updates);
+        
+        showToast('Transacción actualizada correctamente', 'success');
+        return { success: true };
+        
+    } catch (error) {
+        console.error('❌ Error al actualizar transacción:', error);
+        showToast('Error al actualizar transacción: ' + error.message, 'danger');
+        throw error;
+    }
+}
+
+async deleteTransaction(transactionId) {
+    try {
+        await this.db.collection('transactions').doc(transactionId).delete();
+        showToast('Transacción eliminada correctamente', 'success');
+        return { success: true };
+    } catch (error) {
+        console.error('❌ Error al eliminar transacción:', error);
+        showToast('Error al eliminar transacción: ' + error.message, 'danger');
+        throw error;
+    }
+}
+
+
 
         async getDashboardData(month, year) {
             try {

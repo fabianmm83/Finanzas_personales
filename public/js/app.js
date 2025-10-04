@@ -5,6 +5,8 @@ let chartInstances = {
     expense: null
 };
 
+let currentTimeframe = 'week'; // 'week' o 'month'
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM cargado - Iniciando aplicación");
     initializeApp();
@@ -281,6 +283,11 @@ function loadDashboard(user) {
                 </p>
             </div>
 
+            <!-- Resumen Financiero Mejorado - MOVIDO ARRIBA -->
+            <div class="row mb-4" id="financial-summary">
+                <!-- Se llenará dinámicamente -->
+            </div>
+
             <!-- Botones principales -->
             <div class="text-center mb-4">
                 <button class="btn btn-primary me-2" onclick="showAddBudget()">
@@ -294,7 +301,7 @@ function loadDashboard(user) {
                 </button>
             </div>
 
-            <!-- Filtros Avanzados -->
+            <!-- Filtros Avanzados - MOVIDO ABAJO -->
             <div class="row justify-content-center mb-4">
                 <div class="col-md-12">
                     <div class="card shadow-sm">
@@ -332,20 +339,26 @@ function loadDashboard(user) {
                 </div>
             </div>
 
-            <!-- Resumen Financiero Mejorado -->
-            <div class="row mb-4" id="financial-summary">
-                <!-- Se llenará dinámicamente -->
-            </div>
-
-            <!-- Gráfico de Evolución Temporal -->
+            <!-- Gráfico de Evolución Temporal con Selector -->
             <div class="row mb-4">
                 <div class="col-md-12">
                     <div class="card shadow">
                         <div class="card-body">
-                            <h2 class="text-center card-title mb-4">
-                                Evolución de Ingresos y Gastos
-                                <small class="text-muted d-block" id="timeline-date-range"></small>
-                            </h2>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="card-title mb-0">
+                                    Evolución de Ingresos y Gastos
+                                </h2>
+                                <div class="btn-group" role="group">
+                                    <input type="radio" class="btn-check" name="timeframe" id="timeframe-week" value="week" ${currentTimeframe === 'week' ? 'checked' : ''}>
+                                    <label class="btn btn-outline-primary" for="timeframe-week">
+                                        <i class="fas fa-calendar-week me-1"></i>Semanal
+                                    </label>
+                                    <input type="radio" class="btn-check" name="timeframe" id="timeframe-month" value="month" ${currentTimeframe === 'month' ? 'checked' : ''}>
+                                    <label class="btn btn-outline-primary" for="timeframe-month">
+                                        <i class="fas fa-calendar-alt me-1"></i>Mensual
+                                    </label>
+                                </div>
+                            </div>
                             <canvas id="timelineChart" height="120"></canvas>
                         </div>
                     </div>
@@ -401,10 +414,24 @@ function loadDashboard(user) {
                 applyFilters();
             });
         }
+
+        // Configurar selectores de timeframe
+        document.getElementById('timeframe-week').addEventListener('change', function() {
+            if (this.checked) {
+                currentTimeframe = 'week';
+                reloadDashboardWithTimeframe('week');
+            }
+        });
+        document.getElementById('timeframe-month').addEventListener('change', function() {
+            if (this.checked) {
+                currentTimeframe = 'month';
+                reloadDashboardWithTimeframe('month');
+            }
+        });
     }, 100);
 
     // Cargar datos del dashboard
-    loadDashboardData(currentYear, currentMonth);
+    loadDashboardData(currentYear, currentMonth, currentTimeframe);
 }
 
 // Función para debug de transacciones
@@ -423,8 +450,8 @@ function debugTransactions(transactions) {
     });
 }
 
-// Nueva función para cargar datos del dashboard
-async function loadDashboardData(year, month) {
+// FUNCIÓN MEJORADA: Cargar datos del dashboard con selector de vista temporal
+async function loadDashboardData(year, month, timeframe = 'week') {
     showLoading(true);
     
     try {
@@ -438,11 +465,11 @@ async function loadDashboardData(year, month) {
         // Actualizar resumen financiero
         updateFinancialSummary(dashboardData.summary);
         
-        // Actualizar lista de transacciones
+        // Actualizar lista de transacciones con botones de editar/eliminar
         updateTransactionsList(dashboardData.transactions);
         
-        // Generar gráficos
-        generateCharts(dashboardData);
+        // Generar gráficos con el timeframe seleccionado
+        generateCharts(dashboardData, timeframe);
         
         // Cargar categorías en filtros
         loadCategoriesFilter(dashboardData.categories);
@@ -538,7 +565,7 @@ function processTransactionDate(transaction) {
     }
 }
 
-// Función para actualizar lista de transacciones CORREGIDA
+// FUNCIÓN MEJORADA: Actualizar lista de transacciones con botones de editar/eliminar
 function updateTransactionsList(transactions) {
     const transactionsList = document.getElementById('transactions-list');
     if (!transactionsList) {
@@ -569,19 +596,20 @@ function updateTransactionsList(transactions) {
                         <th>Descripción</th>
                         <th>Tipo</th>
                         <th class="text-end">Monto</th>
+                        <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
     
     transactions.slice(0, 10).forEach(transaction => {
-        // CORRECCIÓN: Usar la función de procesamiento de fecha
         const date = processTransactionDate(transaction);
         const isIncome = transaction.type === 'income';
+        const formattedDate = date.toLocaleDateString('es-ES');
         
         transactionsHTML += `
             <tr>
-                <td>${date.toLocaleDateString('es-ES')}</td>
+                <td>${formattedDate}</td>
                 <td>
                     <span class="badge bg-light text-dark">${transaction.category}</span>
                 </td>
@@ -593,6 +621,14 @@ function updateTransactionsList(transactions) {
                 </td>
                 <td class="text-end ${isIncome ? 'text-success' : 'text-danger'}">
                     <strong>${isIncome ? '+' : '-'}$${transaction.amount.toFixed(2)}</strong>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editTransaction('${transaction.id}')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteTransaction('${transaction.id}')" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </td>
             </tr>
         `;
@@ -614,19 +650,25 @@ function updateTransactionsList(transactions) {
     transactionsList.innerHTML = transactionsHTML;
 }
 
-// Función para generar gráficos
-function generateCharts(dashboardData) {
+// FUNCIÓN MEJORADA: Generar gráficos con selector de timeframe
+function generateCharts(dashboardData, timeframe = 'week') {
     // Destruir gráficos existentes
     destroyCharts();
     
-    // Gráfico de Evolución Temporal
+    // Gráfico de Evolución Temporal MEJORADO
     const timelineCtx = document.getElementById('timelineChart');
     if (timelineCtx) {
-        const weeklyData = generateWeeklyData(dashboardData.transactions, dashboardData.summary.month, dashboardData.summary.year);
+        let timelineData;
+        
+        if (timeframe === 'week') {
+            timelineData = generateDailyData(dashboardData.transactions, dashboardData.summary.month, dashboardData.summary.year);
+        } else {
+            timelineData = generateWeeklyData(dashboardData.transactions, dashboardData.summary.month, dashboardData.summary.year);
+        }
         
         chartInstances.timeline = new Chart(timelineCtx, {
             type: 'line',
-            data: weeklyData,
+            data: timelineData,
             options: {
                 responsive: true,
                 interaction: {
@@ -650,13 +692,17 @@ function generateCharts(dashboardData) {
                                 return context.dataset.label + ': $' + context.raw.toFixed(2);
                             }
                         }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
                     }
                 }
             }
         });
     }
     
-    // Gráfico de Ingresos por categoría
+    // Gráfico de Ingresos por categoría (Doughnut)
     const incomeCtx = document.getElementById('incomeChart');
     if (incomeCtx) {
         const incomeCategories = Object.keys(dashboardData.categories.income || {});
@@ -664,40 +710,54 @@ function generateCharts(dashboardData) {
         
         if (incomeCategories.length > 0) {
             chartInstances.income = new Chart(incomeCtx, {
-                type: 'bar',
+                type: 'doughnut',
                 data: {
                     labels: incomeCategories,
                     datasets: [{
-                        label: 'Ingresos',
                         data: incomeAmounts,
-                        backgroundColor: '#28a745',
-                        borderColor: '#218838',
-                        borderWidth: 1
+                        backgroundColor: [
+                            '#28a745', '#20c997', '#17a2b8', '#6f42c1', 
+                            '#e83e8c', '#fd7e14', '#ffc107', '#28a745'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
                     }]
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '$' + value.toFixed(2);
-                                }
-                            }
-                        }
-                    },
                     plugins: {
                         legend: {
-                            display: false
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
                         }
                     }
                 }
             });
+        } else {
+            incomeCtx.parentElement.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay datos de ingresos</p>
+                </div>
+            `;
         }
     }
     
-    // Gráfico de Gastos por categoría
+    // Gráfico de Gastos por categoría (Doughnut)
     const expenseCtx = document.getElementById('expenseChart');
     if (expenseCtx) {
         const expenseCategories = Object.keys(dashboardData.categories.expense || {});
@@ -705,51 +765,119 @@ function generateCharts(dashboardData) {
         
         if (expenseCategories.length > 0) {
             chartInstances.expense = new Chart(expenseCtx, {
-                type: 'bar',
+                type: 'doughnut',
                 data: {
                     labels: expenseCategories,
                     datasets: [{
-                        label: 'Gastos',
                         data: expenseAmounts,
-                        backgroundColor: '#dc3545',
-                        borderColor: '#c82333',
-                        borderWidth: 1
+                        backgroundColor: [
+                            '#dc3545', '#fd7e14', '#ffc107', '#6610f2',
+                            '#e83e8c', '#6f42c1', '#fd7e14', '#dc3545'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
                     }]
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '$' + value.toFixed(2);
-                                }
-                            }
-                        }
-                    },
                     plugins: {
                         legend: {
-                            display: false
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
                         }
                     }
                 }
             });
+        } else {
+            expenseCtx.parentElement.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay datos de gastos</p>
+                </div>
+            `;
         }
     }
 }
 
-// Función para generar datos semanales CORREGIDA
+// NUEVA FUNCIÓN: Generar datos diarios para vista semanal
+function generateDailyData(transactions, month, year) {
+    // Obtener el primer y último día del mes
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    
+    // Crear array para todos los días del mes
+    const daysInMonth = lastDay.getDate();
+    const dailyIncome = new Array(daysInMonth).fill(0);
+    const dailyExpense = new Array(daysInMonth).fill(0);
+    
+    // Procesar transacciones
+    transactions.forEach(transaction => {
+        const date = processTransactionDate(transaction);
+        const day = date.getDate() - 1; // índice 0-based
+        
+        if (day >= 0 && day < daysInMonth) {
+            if (transaction.type === 'income') {
+                dailyIncome[day] += transaction.amount;
+            } else {
+                dailyExpense[day] += transaction.amount;
+            }
+        }
+    });
+    
+    // Crear etiquetas para los días
+    const dayLabels = Array.from({length: daysInMonth}, (_, i) => {
+        const day = i + 1;
+        return `${day}/${month}`;
+    });
+    
+    return {
+        labels: dayLabels,
+        datasets: [
+            {
+                label: 'Ingresos Diarios',
+                data: dailyIncome,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Gastos Diarios',
+                data: dailyExpense,
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            }
+        ]
+    };
+}
+
+// FUNCIÓN MEJORADA: Generar datos semanales para vista mensual
 function generateWeeklyData(transactions, month, year) {
-    const weeks = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
-    const weeklyIncome = [0, 0, 0, 0];
-    const weeklyExpense = [0, 0, 0, 0];
+    const weeks = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5'];
+    const weeklyIncome = [0, 0, 0, 0, 0];
+    const weeklyExpense = [0, 0, 0, 0, 0];
     
     transactions.forEach(transaction => {
-        // CORRECCIÓN: Usar la función de procesamiento de fecha
         const date = processTransactionDate(transaction);
-        const week = Math.floor((date.getDate() - 1) / 7);
-        const weekIndex = Math.min(week, 3); // Asegurar que no exceda 3
+        const day = date.getDate();
+        const week = Math.floor((day - 1) / 7);
+        const weekIndex = Math.min(week, 4); // Asegurar que no exceda 4 (semana 5)
         
         if (transaction.type === 'income') {
             weeklyIncome[weekIndex] += transaction.amount;
@@ -758,22 +886,48 @@ function generateWeeklyData(transactions, month, year) {
         }
     });
     
+    // Filtrar semanas que tengan datos
+    const hasData = weeklyIncome.some(income => income > 0) || weeklyExpense.some(expense => expense > 0);
+    if (!hasData) {
+        return {
+            labels: ['Sin datos'],
+            datasets: [
+                {
+                    label: 'Ingresos',
+                    data: [0],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Gastos',
+                    data: [0],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4
+                }
+            ]
+        };
+    }
+    
     return {
         labels: weeks,
         datasets: [
             {
-                label: 'Ingresos',
+                label: 'Ingresos Semanales',
                 data: weeklyIncome,
                 borderColor: '#28a745',
                 backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                tension: 0.4
+                tension: 0.4,
+                fill: true
             },
             {
-                label: 'Gastos',
+                label: 'Gastos Semanales',
                 data: weeklyExpense,
                 borderColor: '#dc3545',
                 backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                tension: 0.4
+                tension: 0.4,
+                fill: true
             }
         ]
     };
@@ -786,6 +940,15 @@ function destroyCharts() {
             chart.destroy();
         }
     });
+}
+
+// FUNCIÓN MEJORADA: Recargar dashboard con timeframe seleccionado
+function reloadDashboardWithTimeframe(timeframe) {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
+    loadDashboardData(currentYear, currentMonth, timeframe);
 }
 
 // Funciones utilitarias
@@ -847,7 +1010,125 @@ function applyFilters() {
     showToast('Filtros aplicados: ' + (category || 'Todas categorías'), 'success');
 }
 
-// Funciones de navegación y páginas
+// NUEVAS FUNCIONES: Editar y eliminar transacciones
+async function editTransaction(transactionId) {
+    try {
+        // Obtener la transacción
+        const transactions = await transactionManager.getTransactions({});
+        const transaction = transactions.find(t => t.id === transactionId);
+        
+        if (!transaction) {
+            showToast('Transacción no encontrada', 'danger');
+            return;
+        }
+        
+        // Mostrar formulario de edición
+        showEditTransactionForm(transaction);
+        
+    } catch (error) {
+        console.error('Error al editar transacción:', error);
+        showToast('Error al cargar la transacción', 'danger');
+    }
+}
+
+async function deleteTransaction(transactionId) {
+    if (confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
+        try {
+            await transactionManager.deleteTransaction(transactionId);
+            showToast('Transacción eliminada correctamente', 'success');
+            // Recargar el dashboard
+            loadDashboard(auth.currentUser);
+        } catch (error) {
+            console.error('Error al eliminar transacción:', error);
+            showToast('Error al eliminar la transacción', 'danger');
+        }
+    }
+}
+
+function showEditTransactionForm(transaction) {
+    const content = document.getElementById('content');
+    const date = processTransactionDate(transaction);
+    const formattedDate = date.toISOString().split('T')[0];
+    
+    content.innerHTML = `
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">
+                                <i class="fas fa-edit text-primary me-2"></i>
+                                Editar Transacción
+                            </h2>
+                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                        
+                        <form id="edit-transaction-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit-transaction-type" class="form-label">Tipo</label>
+                                    <select class="form-select" id="edit-transaction-type" required>
+                                        <option value="income" ${transaction.type === 'income' ? 'selected' : ''}>Ingreso</option>
+                                        <option value="expense" ${transaction.type === 'expense' ? 'selected' : ''}>Gasto</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit-transaction-amount" class="form-label">Monto ($)</label>
+                                    <input type="number" step="0.01" class="form-control" id="edit-transaction-amount" 
+                                           value="${transaction.amount}" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-transaction-category" class="form-label">Categoría</label>
+                                <input type="text" class="form-control" id="edit-transaction-category" 
+                                       value="${transaction.category}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-transaction-date" class="form-label">Fecha</label>
+                                <input type="date" class="form-control" id="edit-transaction-date" 
+                                       value="${formattedDate}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-transaction-description" class="form-label">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="edit-transaction-description" rows="2">${transaction.description || ''}</textarea>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save me-2"></i>Actualizar Transacción
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('edit-transaction-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const transactionData = {
+            type: document.getElementById('edit-transaction-type').value,
+            amount: parseFloat(document.getElementById('edit-transaction-amount').value),
+            category: document.getElementById('edit-transaction-category').value,
+            date: document.getElementById('edit-transaction-date').value,
+            description: document.getElementById('edit-transaction-description').value
+        };
+
+        try {
+            await transactionManager.updateTransaction(transaction.id, transactionData);
+            showToast('Transacción actualizada correctamente', 'success');
+            loadDashboard(auth.currentUser);
+        } catch (error) {
+            console.error('Error actualizando transacción:', error);
+            showToast('Error al actualizar la transacción', 'danger');
+        }
+    });
+}
+
+// Funciones de navegación y páginas (se mantienen igual)
 function showAllTransactions() {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -928,19 +1209,20 @@ async function loadAllTransactions(year, month) {
                             <th>Descripción</th>
                             <th>Tipo</th>
                             <th class="text-end">Monto</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
         
         transactions.forEach(transaction => {
-            // CORRECCIÓN: Usar la función de procesamiento de fecha
             const date = processTransactionDate(transaction);
             const isIncome = transaction.type === 'income';
+            const formattedDate = date.toLocaleDateString('es-ES');
             
             transactionsHTML += `
                 <tr>
-                    <td>${date.toLocaleDateString('es-ES')}</td>
+                    <td>${formattedDate}</td>
                     <td>
                         <span class="badge bg-light text-dark">${transaction.category}</span>
                     </td>
@@ -952,6 +1234,14 @@ async function loadAllTransactions(year, month) {
                     </td>
                     <td class="text-end ${isIncome ? 'text-success' : 'text-danger'}">
                         <strong>${isIncome ? '+' : '-'}$${transaction.amount.toFixed(2)}</strong>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editTransaction('${transaction.id}')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTransaction('${transaction.id}')" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
                 </tr>
             `;
@@ -1425,4 +1715,103 @@ function showError(message) {
             </div>
         </div>
     `;
+}
+
+// FUNCIONES DE AUTENTICACIÓN (PENDIENTES)
+async function loginWithEmail(email, password) {
+    showLoading(true);
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        console.log('✅ Usuario logueado:', userCredential.user.email);
+        showToast('¡Bienvenido!', 'success');
+    } catch (error) {
+        console.error('❌ Error en login:', error);
+        let errorMessage = 'Error al iniciar sesión';
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+                errorMessage = 'Usuario no encontrado';
+                break;
+            case 'auth/wrong-password':
+                errorMessage = 'Contraseña incorrecta';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Email inválido';
+                break;
+            default:
+                errorMessage = error.message;
+        }
+        
+        showToast(errorMessage, 'danger');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function registerWithEmail(email, password, username) {
+    showLoading(true);
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        // Actualizar perfil con el nombre de usuario
+        await user.updateProfile({
+            displayName: username
+        });
+        
+        console.log('✅ Usuario registrado:', user.email);
+        showToast('¡Cuenta creada exitosamente!', 'success');
+        
+        // El authStateChanged se encargará de redirigir al dashboard
+    } catch (error) {
+        console.error('❌ Error en registro:', error);
+        let errorMessage = 'Error al crear la cuenta';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage = 'El email ya está en uso';
+                break;
+            case 'auth/weak-password':
+                errorMessage = 'La contraseña es muy débil';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Email inválido';
+                break;
+            default:
+                errorMessage = error.message;
+        }
+        
+        showToast(errorMessage, 'danger');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function loginWithGoogle() {
+    showLoading(true);
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('profile');
+        provider.addScope('email');
+        
+        const result = await auth.signInWithPopup(provider);
+        console.log('✅ Login con Google exitoso:', result.user.email);
+        showToast('¡Bienvenido!', 'success');
+    } catch (error) {
+        console.error('❌ Error en login con Google:', error);
+        showToast('Error al iniciar sesión con Google', 'danger');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function logout() {
+    try {
+        await auth.signOut();
+        console.log('✅ Usuario cerró sesión');
+        showToast('Sesión cerrada', 'info');
+    } catch (error) {
+        console.error('❌ Error al cerrar sesión:', error);
+        showToast('Error al cerrar sesión', 'danger');
+    }
 }
