@@ -731,22 +731,33 @@ async function loadMonthsCarousel(currentYear, currentMonth) {
     }
 }
 
-// Función para cargar categorías en filtros
-function loadCategoriesFilter(categories) {
-    const categorySelect = document.getElementById('category');
-    let categoriesHTML = '<option value="">Todas las categorías</option>';
+function loadCategoriesFilter() {
+    const categoryFilter = document.getElementById('categoryFilter');
     
-    // Combinar categorías de ingresos y gastos
-    const allCategories = new Set([
-        ...Object.keys(categories.income),
-        ...Object.keys(categories.expense)
-    ]);
+    // Verificar que el elemento existe antes de manipularlo
+    if (!categoryFilter) {
+        console.error('❌ Elemento categoryFilter no encontrado en el DOM');
+        return;
+    }
     
-    allCategories.forEach(category => {
-        categoriesHTML += `<option value="${category}">${category}</option>`;
-    });
-    
-    categorySelect.innerHTML = categoriesHTML;
+    try {
+        // Limpiar opciones existentes
+        categoryFilter.innerHTML = '<option value="">Todas las categorías</option>';
+        
+        // Obtener categorías únicas de las transacciones
+        const categories = [...new Set(window.transactions.map(t => t.category))].filter(Boolean);
+        
+        categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        });
+        
+        console.log('✅ Filtro de categorías cargado:', categories.length, 'categorías');
+    } catch (error) {
+        console.error('❌ Error cargando filtro de categorías:', error);
+    }
 }
 
 // Función para aplicar filtros
