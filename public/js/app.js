@@ -579,70 +579,45 @@ function updateFinancialSummary(summary) {
 
 
 // Función para procesar fecha de transacción - MEJORADA
+// app.js - REEMPLAZA la función processTransactionDate existente
 function processTransactionDate(transaction) {
-    console.log('🔍 Procesando fecha de transacción:', transaction);
-    
-    try {
-        // Si ya es un objeto Date válido
-        if (transaction.date instanceof Date && !isNaN(transaction.date.getTime())) {
-            console.log('✅ Ya es un Date válido');
-            return transaction.date;
-        }
-        
-        // Si es un Timestamp de Firebase
-        if (transaction.date && typeof transaction.date.toDate === 'function') {
-            console.log('✅ Es un Timestamp de Firebase');
-            const date = transaction.date.toDate();
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
-        
-        // Si es un objeto Timestamp serializado
-        if (transaction.date && transaction.date.seconds) {
-            console.log('✅ Es un Timestamp serializado');
-            const date = new Date(transaction.date.seconds * 1000);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
-        
-        // Si es un string de fecha
-        if (transaction.date && typeof transaction.date === 'string') {
-            console.log('✅ Es un string de fecha');
-            const date = new Date(transaction.date);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
-        
-        // Si es un número (timestamp)
-        if (transaction.date && typeof transaction.date === 'number') {
-            console.log('✅ Es un número timestamp');
-            const date = new Date(transaction.date);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
-        
-        // Fecha por defecto
-        console.log('⚠️ Usando fecha por defecto');
-        return new Date();
-        
-    } catch (error) {
-        console.error('❌ Error procesando fecha:', error, transaction);
-        return new Date();
+    // Si la transacción ya tiene la fecha procesada correctamente, usarla directamente
+    if (transaction.date instanceof Date && !isNaN(transaction.date.getTime())) {
+        return transaction.date;
     }
+    
+    // Si no, usar la función del TransactionManager
+    if (typeof transactionManager !== 'undefined' && transactionManager.processTransactionDate) {
+        return transactionManager.processTransactionDate(transaction);
+    }
+    
+    // Fallback
+    console.warn('⚠️ Usando fecha actual como fallback');
+    return new Date();
 }
 
 
 // FUNCIÓN MEJORADA: Actualizar lista de transacciones con botones de editar/eliminar
+// app.js - MEJORA la función updateTransactionsList
 function updateTransactionsList(transactions) {
     const transactionsList = document.getElementById('transactions-list');
     if (!transactionsList) {
         console.error('❌ Elemento transactions-list no encontrado');
         return;
     }
+    
+    // DEBUG: Mostrar información de fechas
+    console.log('🔍 Debug de fechas en transacciones recientes:');
+    transactions.slice(0, 5).forEach((transaction, index) => {
+        const processedDate = processTransactionDate(transaction);
+        console.log(`Transacción ${index}:`, {
+            id: transaction.id,
+            fechaProcesada: processedDate,
+            fechaFormateada: processedDate.toLocaleDateString('es-ES'),
+            tipo: transaction.type,
+            categoria: transaction.category
+        });
+    });
     
     if (transactions.length === 0) {
         transactionsList.innerHTML = `
