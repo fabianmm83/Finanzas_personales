@@ -134,10 +134,12 @@ async getTransactionsDirect(filters = {}) {
             }
         }
 
-        // transactions.js - REEMPLAZA la función processTransactionDate existente
+// transactions.js - MEJORA LA FUNCIÓN processTransactionDate
 processTransactionDate(transaction) {
     try {
-        console.log('🔍 Procesando fecha en TransactionManager:', transaction);
+        console.log('🔍 TRANSACCIÓN COMPLETA en processTransactionDate:', transaction);
+        console.log('📅 transaction.date:', transaction.date);
+        console.log('📅 Tipo de transaction.date:', typeof transaction.date);
         
         const dateData = transaction.date;
         
@@ -147,25 +149,7 @@ processTransactionDate(transaction) {
             return dateData;
         }
         
-        // Si es un Timestamp de Firebase (objeto con método toDate)
-        if (dateData && typeof dateData.toDate === 'function') {
-            console.log('✅ Es un Timestamp de Firebase con toDate()');
-            const date = dateData.toDate();
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
-        
-        // Si es un objeto Timestamp serializado (con seconds)
-        if (dateData && dateData.seconds) {
-            console.log('✅ Es un Timestamp serializado con seconds');
-            const date = new Date(dateData.seconds * 1000);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
-        
-        // Si es un string de fecha
+        // Si es un string de fecha (puede venir de Cloud Functions serializado)
         if (dateData && typeof dateData === 'string') {
             console.log('✅ Es un string de fecha');
             const date = new Date(dateData);
@@ -174,29 +158,46 @@ processTransactionDate(transaction) {
             }
         }
         
-        // Si es un número (timestamp)
-        if (dateData && typeof dateData === 'number') {
-            console.log('✅ Es un número timestamp');
-            const date = new Date(dateData);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
+        // Si es un objeto con propiedades de fecha
+        if (dateData && typeof dateData === 'object') {
+            console.log('✅ Es un objeto, verificando propiedades...');
+            console.log('📊 Propiedades del objeto date:', Object.keys(dateData));
+            
+            // Si tiene el método toDate (Timestamp de Firestore)
+            if (typeof dateData.toDate === 'function') {
+                console.log('✅ Tiene método toDate()');
+                const date = dateData.toDate();
+                if (date instanceof Date && !isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+            
+            // Si tiene _seconds (Timestamp serializado)
+            if (dateData._seconds) {
+                console.log('✅ Tiene _seconds');
+                const date = new Date(dateData._seconds * 1000);
+                if (date instanceof Date && !isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+            
+            // Si es un objeto vacío
+            if (Object.keys(dateData).length === 0) {
+                console.error('❌ Objeto date vacío recibido');
             }
         }
         
-        // Si es un Timestamp de Firestore (caso especial)
-        if (dateData && dateData._seconds) {
-            console.log('✅ Es un Timestamp de Firestore con _seconds');
-            const date = new Date(dateData._seconds * 1000);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
+        console.error('❌ No se pudo procesar la fecha, estructura completa:', {
+            transactionId: transaction.id,
+            dateField: transaction.date,
+            tipoDate: typeof transaction.date,
+            todasLasPropiedades: Object.keys(transaction)
+        });
         
-        console.error('❌ No se pudo procesar la fecha, usando fecha actual como fallback:', dateData);
         return new Date();
         
     } catch (error) {
-        console.error('❌ Error procesando fecha:', error, transaction);
+        console.error('❌ Error procesando fecha:', error);
         return new Date();
     }
 }

@@ -148,7 +148,6 @@ function updateNavbar(user) {
 
 
 
-
 function loadLoginPage() {
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -697,9 +696,6 @@ function updateTransactionsList(transactions) {
 
 
 
-
-
-
 function generateCharts(dashboardData, timeframe = 'week', chartType = 'doughnut') {
     // Destruir gráficos existentes
     destroyCharts();
@@ -1207,8 +1203,6 @@ async function deleteTransaction(transactionId) {
         }
     }
 }
-
-
 
 
 function showEditTransactionForm(transaction) {
