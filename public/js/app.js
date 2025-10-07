@@ -1906,69 +1906,96 @@ function showAddBudget() {
     });
 }
 
+
 function showProfile() {
     const user = auth.currentUser;
     const content = document.getElementById('content');
     
     content.innerHTML = `
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h2 class="mb-0">
-                                <i class="fas fa-user-circle text-primary me-2"></i>
-                                Mi Perfil
-                            </h2>
-                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
-                                <i class="fas fa-arrow-left me-1"></i> Volver
-                            </button>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-4 text-center">
-                                <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
-                                <h4>${user.email}</h4>
-                                <p class="text-muted">Usuario</p>
+        <div class="container mt-4">
+            <!-- Nueva fila para el perfil y la rueda -->
+            <div class="row">
+                <!-- Columna del perfil -->
+                <div class="col-md-4">
+                    <div class="card shadow">
+                        <div class="card-body text-center">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="mb-0">
+                                    <i class="fas fa-user-circle text-primary me-2"></i>
+                                    Mi Perfil
+                                </h2>
+                                <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                                    <i class="fas fa-arrow-left me-1"></i> Volver
+                                </button>
                             </div>
-                            <div class="col-md-8">
-                                <div class="row">
-                                    <div class="col-6">
-                                        <div class="card bg-light">
-                                            <div class="card-body text-center">
-                                                <h5>Transacciones</h5>
-                                                <p class="h3 text-primary" id="profile-transactions-count">0</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="card bg-light">
-                                            <div class="card-body text-center">
-                                                <h5>Presupuestos</h5>
-                                                <p class="h3 text-success" id="profile-budgets-count">0</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                            
+                            <i class="fas fa-user-circle fa-5x mb-3 text-primary"></i>
+                            <h2>${user.displayName || user.email}</h2>
+                            <p class="text-muted">
+                                Miembro desde: ${new Date(user.metadata.creationTime).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+                            </p>
+                            <hr>
+                            
+                            <!-- Información de la cuenta -->
+                            <div class="mt-3">
+                                <ul class="list-group">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Email verificado
+                                        <span class="badge ${user.emailVerified ? 'bg-success' : 'bg-warning'}">
+                                            ${user.emailVerified ? 'Sí' : 'No'}
+                                        </span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Proveedor
+                                        <span class="badge bg-info">${user.providerData[0]?.providerId || 'Email'}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- Estadísticas -->
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h5>Total Ahorrado</h5>
+                                    <p class="text-success h4">$<span id="totalSavings">0.00</span></p>
+                                </div>
+                                <div class="col-6">
+                                    <h5>Transacciones</h5>
+                                    <p class="text-primary h4"><span id="totalTransactions">0</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna de la rueda de la vida -->
+                <div class="col-md-8">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h3 class="card-title text-center mb-4">
+                                <i class="fas fa-chart-pie text-primary me-2"></i>
+                                Mi Rueda de la Vida
+                            </h3>
+                            
+                            <div class="text-center mb-4">
+                                <canvas id="lifeWheel" width="400" height="400"></canvas>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <h4 class="text-center mb-4">Ajusta tus valores:</h4>
+                                <div class="row" id="sliderContainer">
+                                    <!-- Los sliders se generarán dinámicamente -->
                                 </div>
                                 
-                                <div class="mt-4">
-                                    <h5>Información de la cuenta</h5>
-                                    <ul class="list-group">
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            Email verificado
-                                            <span class="badge ${user.emailVerified ? 'bg-success' : 'bg-warning'}">
-                                                ${user.emailVerified ? 'Sí' : 'No'}
-                                            </span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            Proveedor
-                                            <span class="badge bg-info">${user.providerData[0]?.providerId || 'Email'}</span>
-                                        </li>
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            Fecha de creación
-                                            <small class="text-muted">${new Date(user.metadata.creationTime).toLocaleDateString('es-ES')}</small>
-                                        </li>
-                                    </ul>
+                                <!-- Botones de guardar/cargar -->
+                                <div class="text-center mt-4">
+                                    <button class="btn btn-primary me-2" onclick="saveWheelProgress()">
+                                        <i class="fas fa-save me-1"></i> Guardar Progreso
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="loadWheelProgress()">
+                                        <i class="fas fa-undo me-1"></i> Cargar Último Guardado
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1978,39 +2005,269 @@ function showProfile() {
         </div>
     `;
 
+    // Inicializar la rueda de la vida
+    initializeLifeWheel();
+    
     // Cargar estadísticas del perfil
     loadProfileStats();
 }
 
-// Función para cargar estadísticas del perfil
+// Función para inicializar la rueda de la vida
+function initializeLifeWheel() {
+    const areas = [
+        'Salud',
+        'Hogar',
+        'Familia',
+        'Trabajo',
+        'Amor',
+        'Espiritualidad',
+        'Desarrollo Personal',
+        'Amigos',
+        'Ocio'
+    ];
+
+    // Generar sliders
+    const sliderContainer = document.getElementById('sliderContainer');
+    sliderContainer.innerHTML = '';
+    
+    areas.forEach((area, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-md-4 mb-3';
+        col.innerHTML = `
+            <label for="slider${index}" class="form-label slider-label">${area}</label>
+            <input type="range" class="form-range" id="slider${index}" 
+                   min="0" max="10" value="5" 
+                   oninput="updateWheelChart(${index}, this.value)">
+            <div class="value-display">
+                <span id="value${index}">5</span>/10
+            </div>
+        `;
+        sliderContainer.appendChild(col);
+    });
+
+    // Configurar el gráfico
+    const ctx = document.getElementById('lifeWheel').getContext('2d');
+    window.lifeWheelChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: areas,
+            datasets: [{
+                label: 'Mi Rueda de la Vida',
+                data: Array(areas.length).fill(5),
+                backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(52, 152, 219, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(52, 152, 219, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    min: 0,
+                    max: 10,
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 2,
+                        font: {
+                            size: 12
+                        },
+                        backdropColor: 'transparent'
+                    },
+                    pointLabels: {
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        color: '#2c3e50'
+                    },
+                    angleLines: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.raw}/10`;
+                        }
+                    }
+                }
+            },
+            elements: {
+                line: {
+                    tension: 0.1
+                }
+            }
+        }
+    });
+
+    // Cargar progreso automáticamente al iniciar
+    loadWheelProgress();
+}
+
+// Función para actualizar el gráfico
+function updateWheelChart(index, value) {
+    document.getElementById(`value${index}`).textContent = value;
+    window.lifeWheelChart.data.datasets[0].data[index] = parseInt(value);
+    window.lifeWheelChart.update();
+}
+
+// Función para guardar progreso
+function saveWheelProgress() {
+    if (window.lifeWheelChart) {
+        const values = window.lifeWheelChart.data.datasets[0].data;
+        const user = auth.currentUser;
+        if (user) {
+            // Guardar en Firestore para el usuario actual
+            localStorage.setItem(`wheelValues_${user.uid}`, JSON.stringify(values));
+            showToast('Progreso guardado correctamente', 'success');
+        }
+    }
+}
+
+// Función para cargar progreso
+function loadWheelProgress() {
+    const user = auth.currentUser;
+    if (user && window.lifeWheelChart) {
+        const savedValues = localStorage.getItem(`wheelValues_${user.uid}`);
+        if (savedValues) {
+            const values = JSON.parse(savedValues);
+            window.lifeWheelChart.data.datasets[0].data = values;
+            
+            // Actualizar los sliders
+            values.forEach((value, index) => {
+                const slider = document.getElementById(`slider${index}`);
+                if (slider) {
+                    slider.value = value;
+                    document.getElementById(`value${index}`).textContent = value;
+                }
+            });
+            
+            window.lifeWheelChart.update();
+            showToast('Progreso cargado correctamente', 'success');
+        } else {
+            showToast('No hay progreso guardado', 'info');
+        }
+    }
+}
+
+// Función para cargar estadísticas del perfil - ACTUALIZADA
 async function loadProfileStats() {
     try {
-        // Obtener transacciones del mes actual
-        const now = new Date();
-        const transactions = await transactionManager.getTransactions({ 
-            month: now.getMonth() + 1, 
-            year: now.getFullYear() 
-        });
+        const user = auth.currentUser;
+        if (!user) return;
+
+        // Obtener todas las transacciones (no solo del mes actual)
+        const transactions = await transactionManager.getTransactions({});
         
-        // Obtener presupuestos del mes actual
-        const budgets = await budgetManager.getBudgetStatus(now.getMonth() + 1, now.getFullYear());
+        // Obtener todos los presupuestos
+        const allBudgets = await budgetManager.getAllUserBudgets();
         
+        // Calcular total ahorrado (ingresos - gastos)
+        const totalIncome = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const totalExpense = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const totalSavings = totalIncome - totalExpense;
+
         // Actualizar contadores
-        const transactionsCount = document.getElementById('profile-transactions-count');
-        const budgetsCount = document.getElementById('profile-budgets-count');
+        const totalSavingsElement = document.getElementById('totalSavings');
+        const totalTransactionsElement = document.getElementById('totalTransactions');
         
-        if (transactionsCount) {
-            transactionsCount.textContent = transactions.length;
+        if (totalSavingsElement) {
+            totalSavingsElement.textContent = totalSavings.toFixed(2);
         }
         
-        if (budgetsCount) {
-            budgetsCount.textContent = budgets.length;
+        if (totalTransactionsElement) {
+            totalTransactionsElement.textContent = transactions.length;
         }
         
     } catch (error) {
         console.error('Error loading profile stats:', error);
     }
 }
+
+// Agregar estilos CSS para la rueda de la vida
+function addLifeWheelStyles() {
+    if (!document.getElementById('lifeWheelStyles')) {
+        const styles = document.createElement('style');
+        styles.id = 'lifeWheelStyles';
+        styles.textContent = `
+            .slider-label {
+                font-weight: 600;
+                color: var(--dark-color);
+                margin-bottom: 5px;
+                font-size: 0.9rem;
+            }
+            
+            .value-display {
+                font-weight: bold;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                text-align: center;
+                margin-top: 5px;
+            }
+            
+            .form-range {
+                height: 8px;
+            }
+            
+            .form-range::-webkit-slider-thumb {
+                background: var(--primary-color);
+                width: 20px;
+                height: 20px;
+            }
+            
+            .form-range::-moz-range-thumb {
+                background: var(--primary-color);
+                width: 20px;
+                height: 20px;
+                border: none;
+            }
+            
+            #lifeWheel {
+                max-width: 100%;
+                height: auto;
+            }
+            
+            @media (max-width: 768px) {
+                #lifeWheel {
+                    max-width: 300px;
+                }
+                
+                .slider-container .col-md-4 {
+                    margin-bottom: 15px;
+                }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+}
+
+// Llamar a la función de estilos cuando se carga la aplicación
+document.addEventListener('DOMContentLoaded', function() {
+    addLifeWheelStyles();
+});
+
+
+
+
+
 
 // FUNCIONES UTILITARIAS
 function showLoading(show) {
