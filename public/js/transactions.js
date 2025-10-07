@@ -134,7 +134,7 @@ async getTransactionsDirect(filters = {}) {
             }
         }
 
-// transactions.js - MEJORA LA FUNCIÓN processTransactionDate
+// transactions.js - ACTUALIZA processTransactionDate
 processTransactionDate(transaction) {
     try {
         console.log('🔍 TRANSACCIÓN COMPLETA en processTransactionDate:', transaction);
@@ -143,22 +143,23 @@ processTransactionDate(transaction) {
         
         const dateData = transaction.date;
         
+        // PRIMERO: Si es un string ISO (serializado desde Cloud Functions)
+        if (dateData && typeof dateData === 'string') {
+            console.log('✅ Es un string ISO serializado');
+            const date = new Date(dateData);
+            if (date instanceof Date && !isNaN(date.getTime())) {
+                console.log('✅ String ISO convertido correctamente a Date');
+                return date;
+            }
+        }
+        
         // Si ya es un objeto Date válido
         if (dateData instanceof Date && !isNaN(dateData.getTime())) {
             console.log('✅ Ya es un Date válido');
             return dateData;
         }
         
-        // Si es un string de fecha (puede venir de Cloud Functions serializado)
-        if (dateData && typeof dateData === 'string') {
-            console.log('✅ Es un string de fecha');
-            const date = new Date(dateData);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                return date;
-            }
-        }
-        
-        // Si es un objeto con propiedades de fecha
+        // Si es un objeto con propiedades de fecha (Timestamp de Firestore)
         if (dateData && typeof dateData === 'object') {
             console.log('✅ Es un objeto, verificando propiedades...');
             console.log('📊 Propiedades del objeto date:', Object.keys(dateData));
@@ -183,17 +184,11 @@ processTransactionDate(transaction) {
             
             // Si es un objeto vacío
             if (Object.keys(dateData).length === 0) {
-                console.error('❌ Objeto date vacío recibido');
+                console.error('❌ Objeto date vacío recibido - problema de serialización');
             }
         }
         
-        console.error('❌ No se pudo procesar la fecha, estructura completa:', {
-            transactionId: transaction.id,
-            dateField: transaction.date,
-            tipoDate: typeof transaction.date,
-            todasLasPropiedades: Object.keys(transaction)
-        });
-        
+        console.error('❌ No se pudo procesar la fecha, usando fecha actual');
         return new Date();
         
     } catch (error) {

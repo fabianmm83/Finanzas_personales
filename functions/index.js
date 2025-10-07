@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 
 
-// Función para obtener transacciones del usuario - VERSIÓN COMPLETAMENTE CORREGIDA
+// Función para obtener transacciones del usuario - VERSIÓN CON SERIALIZACIÓN CORRECTA
 exports.getUserTransactions = functions.https.onCall(async (data, context) => {
     try {
         console.log("🔍 Iniciando getUserTransactions");
@@ -54,39 +54,32 @@ exports.getUserTransactions = functions.https.onCall(async (data, context) => {
             console.log('📅 data.date tiene toDate?:', data.date && typeof data.date.toDate === 'function');
             console.log('📅 data.date tiene _seconds?:', data.date && data.date._seconds);
             
-            // CORRECCIÓN MEJORADA: Procesar la fecha de manera más robusta
+            // CORRECCIÓN CRÍTICA: Serializar la fecha correctamente
             let transactionDate;
+            let dateSerialized = null;
             
             if (data.date && typeof data.date.toDate === 'function') {
                 // Si es un Timestamp de Firestore
                 transactionDate = data.date.toDate();
-                console.log('✅ Convertido de Timestamp.toDate()');
+                dateSerialized = transactionDate.toISOString(); // Serializar a ISO string
+                console.log('✅ Convertido de Timestamp.toDate() y serializado');
             } else if (data.date && data.date._seconds) {
                 // Si es un Timestamp serializado
                 transactionDate = new Date(data.date._seconds * 1000);
-                console.log('✅ Convertido de _seconds');
+                dateSerialized = transactionDate.toISOString(); // Serializar a ISO string
+                console.log('✅ Convertido de _seconds y serializado');
             } else if (data.date instanceof Date) {
                 // Si ya es una Date
                 transactionDate = data.date;
-                console.log('✅ Ya era una Date');
-            } else if (data.date) {
-                // Intentar convertir de cualquier otra forma
-                try {
-                    transactionDate = new Date(data.date);
-                    if (isNaN(transactionDate.getTime())) {
-                        throw new Error('Fecha inválida');
-                    }
-                    console.log('✅ Convertido de formato genérico');
-                } catch (e) {
-                    console.error('❌ No se pudo convertir la fecha:', data.date);
-                    transactionDate = new Date(); // Fallback
-                }
+                dateSerialized = transactionDate.toISOString(); // Serializar a ISO string
+                console.log('✅ Ya era una Date, serializada');
             } else {
-                console.error('❌ data.date está vacío o undefined');
+                console.error('❌ No se pudo procesar la fecha:', data.date);
                 transactionDate = new Date(); // Fallback
+                dateSerialized = transactionDate.toISOString();
             }
 
-            // Crear el objeto de transacción SIN sobrescribir data
+            // Crear el objeto de transacción CON LA FECHA SERIALIZADA
             const transaction = {
                 id: doc.id,
                 type: data.type,
@@ -94,12 +87,14 @@ exports.getUserTransactions = functions.https.onCall(async (data, context) => {
                 amount: data.amount,
                 description: data.description || '',
                 userId: data.userId,
-                date: transactionDate // Usar la fecha procesada
+                date: dateSerialized, // ENVIAR COMO STRING SERIALIZADO
+                dateObject: transactionDate // Para debug
             };
 
             console.log('📊 Transacción procesada:', {
                 id: transaction.id,
-                fechaProcesada: transactionDate.toLocaleDateString('es-ES'),
+                fechaSerializada: transaction.date,
+                fechaLegible: new Date(transaction.date).toLocaleDateString('es-ES'),
                 tipo: transaction.type
             });
 
@@ -116,17 +111,6 @@ exports.getUserTransactions = functions.https.onCall(async (data, context) => {
             transactions = transactions.filter(transaction => transaction.category === category);
             console.log(`🔍 Filtrado por categoría '${category}': ${transactions.length} transacciones`);
         }
-
-        // DEBUG FINAL: Verificar que las fechas están correctas
-        console.log('🎯 TRANSACCIONES FINALES A ENVIAR:');
-        transactions.forEach((t, i) => {
-            console.log(`Transacción ${i}:`, {
-                id: t.id,
-                fecha: t.date.toLocaleDateString('es-ES'),
-                tipo: t.type,
-                categoria: t.category
-            });
-        });
 
         console.log(`🎯 Total de transacciones a enviar: ${transactions.length}`);
 
@@ -145,7 +129,7 @@ exports.getUserTransactions = functions.https.onCall(async (data, context) => {
     }
 });
 
-// Función para agregar transacción - VERSIÓN COMPLETAMENTE CORREGIDA
+// functions/index.js - addTransaction mejorada
 exports.addTransaction = functions.https.onCall(async (data, context) => {
     try {
         if (!context.auth) {
@@ -157,16 +141,7 @@ exports.addTransaction = functions.https.onCall(async (data, context) => {
 
         console.log(`➕ Agregando transacción para usuario: ${userId}`, data);
 
-        // DEBUG DETALLADO de la fecha que llega
-        console.log('📅 FECHA RECIBIDA DEL FRONTEND - ANÁLISIS COMPLETO:');
-        console.log('   - date (raw):', date);
-        console.log('   - tipo de date:', typeof date);
-        console.log('   - como Date:', new Date(date));
-        console.log('   - timestamp:', new Date(date).getTime());
-        console.log('   - fecha legible:', new Date(date).toLocaleDateString('es-ES'));
-        console.log('   - es válida?:', !isNaN(new Date(date).getTime()));
-
-        // VALIDACIÓN CRÍTICA: Verificar que la fecha es válida
+        // Validar y procesar fecha
         const transactionDate = new Date(date);
         if (isNaN(transactionDate.getTime())) {
             console.error('❌ FECHA INVÁLIDA recibida del frontend:', date);
@@ -175,47 +150,24 @@ exports.addTransaction = functions.https.onCall(async (data, context) => {
 
         console.log('✅ Fecha validada correctamente:', transactionDate.toLocaleDateString('es-ES'));
 
-        // CORRECCIÓN: Crear el Timestamp de Firestore CORRECTAMENTE
-        const firestoreTimestamp = admin.firestore.Timestamp.fromDate(transactionDate);
-        
-        console.log('🔥 Timestamp de Firestore creado:', {
-            seconds: firestoreTimestamp.seconds,
-            nanoseconds: firestoreTimestamp.nanoseconds,
-            comoDate: firestoreTimestamp.toDate().toLocaleDateString('es-ES')
-        });
-
         const transaction = {
             userId: userId,
             type: type,
             category: category,
             amount: parseFloat(amount),
-            date: firestoreTimestamp, // Usar el Timestamp correcto
+            date: admin.firestore.Timestamp.fromDate(transactionDate),
             description: description || '',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
-        console.log('💾 TRANSACCIÓN COMPLETA A GUARDAR:');
-        console.log('   - ID usuario:', transaction.userId);
-        console.log('   - Tipo:', transaction.type);
-        console.log('   - Categoría:', transaction.category);
-        console.log('   - Monto:', transaction.amount);
-        console.log('   - Fecha (Timestamp):', transaction.date);
-        console.log('   - Fecha (legible):', transaction.date.toDate().toLocaleDateString('es-ES'));
-        console.log('   - Descripción:', transaction.description);
-
         const docRef = await admin.firestore().collection('transactions').add(transaction);
 
         console.log(`✅ Transacción creada con ID: ${docRef.id}`);
-        console.log(`📅 Fecha guardada en BD: ${transactionDate.toLocaleDateString('es-ES')}`);
 
         return {
             success: true,
             id: docRef.id,
-            message: 'Transacción agregada correctamente',
-            debug: {
-                fechaGuardada: transactionDate.toLocaleDateString('es-ES'),
-                timestampGuardado: firestoreTimestamp.seconds
-            }
+            message: 'Transacción agregada correctamente'
         };
 
     } catch (error) {
