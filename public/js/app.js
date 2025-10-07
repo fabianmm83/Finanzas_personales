@@ -1502,7 +1502,7 @@ function showBudgetsPage() {
     loadBudgetsList(currentYear, currentMonth);
 }
 
-// Función para cargar lista de presupuestos
+// Función para cargar lista de presupuestos - VERSIÓN ACTUALIZADA CON BOTONES
 async function loadBudgetsList(year, month) {
     try {
         const budgetStatus = await budgetManager.getBudgetStatus(parseInt(month), parseInt(year));
@@ -1536,6 +1536,7 @@ async function loadBudgetsList(year, month) {
                             <th>Gastado</th>
                             <th>Restante</th>
                             <th>Progreso</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1556,7 +1557,7 @@ async function loadBudgetsList(year, month) {
                     <td class="text-danger">
                         $${budget.spent.toFixed(2)}
                     </td>
-                    <td class="text-success">
+                    <td class="${budget.remaining >= 0 ? 'text-success' : 'text-danger'}">
                         $${budget.remaining.toFixed(2)}
                     </td>
                     <td>
@@ -1572,6 +1573,14 @@ async function loadBudgetsList(year, month) {
                             </div>
                             <small class="text-muted">${budget.percentageUsed.toFixed(1)}%</small>
                         </div>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editBudget('${budget.id}')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteBudget('${budget.id}')" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </td>
                 </tr>
             `;
@@ -1590,6 +1599,152 @@ async function loadBudgetsList(year, month) {
         showToast('Error al cargar los presupuestos', 'danger');
     }
 }
+
+// AGREGAR estas nuevas funciones al archivo app.js
+
+// Función para editar presupuesto
+async function editBudget(budgetId) {
+    try {
+        console.log('🔍 Editando presupuesto ID:', budgetId);
+        
+        // Obtener todos los presupuestos del usuario
+        const allBudgets = await budgetManager.getAllUserBudgets();
+        const budget = allBudgets.find(b => b.id === budgetId);
+        
+        if (!budget) {
+            console.error('❌ Presupuesto no encontrado');
+            showToast('Presupuesto no encontrado', 'danger');
+            return;
+        }
+        
+        console.log('✅ Presupuesto encontrado:', budget);
+        showEditBudgetForm(budget);
+        
+    } catch (error) {
+        console.error('❌ Error al editar presupuesto:', error);
+        showToast('Error al cargar el presupuesto', 'danger');
+    }
+}
+
+// Función para mostrar formulario de edición de presupuesto
+function showEditBudgetForm(budget) {
+    const content = document.getElementById('content');
+    
+    content.innerHTML = `
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">
+                                <i class="fas fa-edit text-primary me-2"></i>
+                                Editar Presupuesto
+                            </h2>
+                            <button class="btn btn-secondary" onclick="showBudgetsPage()">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                        
+                        <form id="edit-budget-form">
+                            <div class="mb-3">
+                                <label for="edit-budget-category" class="form-label">Categoría</label>
+                                <input type="text" class="form-control" id="edit-budget-category" 
+                                       value="${budget.category}" required readonly>
+                                <div class="form-text text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    La categoría no se puede modificar para mantener la integridad de los datos.
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit-budget-limit" class="form-label">Límite Mensual ($)</label>
+                                <input type="number" step="0.01" class="form-control" id="edit-budget-limit" 
+                                       value="${budget.limit}" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit-budget-month" class="form-label">Mes</label>
+                                    <select class="form-select" id="edit-budget-month" required>
+                                        ${Array.from({length: 12}, (_, i) => `
+                                            <option value="${i + 1}" ${i + 1 === budget.month ? 'selected' : ''}>
+                                                ${getMonthName(i + 1)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="edit-budget-year" class="form-label">Año</label>
+                                    <input type="number" class="form-control" id="edit-budget-year" 
+                                           value="${budget.year}" min="2020" max="2030" required>
+                                </div>
+                            </div>
+                            
+                            <!-- Información del presupuesto actual -->
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-chart-bar me-2"></i>Resumen Actual
+                                </h6>
+                                <div class="row small">
+                                    <div class="col-6">
+                                        <strong>Límite actual:</strong><br>
+                                        $${budget.limit.toFixed(2)}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Mes/Año:</strong><br>
+                                        ${getMonthName(budget.month)} ${budget.year}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save me-2"></i>Actualizar Presupuesto
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('edit-budget-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const budgetData = {
+            limit: parseFloat(document.getElementById('edit-budget-limit').value),
+            month: parseInt(document.getElementById('edit-budget-month').value),
+            year: parseInt(document.getElementById('edit-budget-year').value)
+        };
+
+        try {
+            await budgetManager.updateBudget(budget.id, budgetData);
+            showToast('Presupuesto actualizado correctamente', 'success');
+            showBudgetsPage(); // Volver a la lista de presupuestos
+        } catch (error) {
+            console.error('Error actualizando presupuesto:', error);
+            showToast('Error al actualizar el presupuesto', 'danger');
+        }
+    });
+}
+
+// Función para eliminar presupuesto
+async function deleteBudget(budgetId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este presupuesto?\n\nEsta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    try {
+        await budgetManager.deleteBudget(budgetId);
+        showToast('Presupuesto eliminado correctamente', 'success');
+        // Recargar la lista de presupuestos
+        showBudgetsPage();
+    } catch (error) {
+        console.error('Error al eliminar presupuesto:', error);
+        showToast('Error al eliminar el presupuesto', 'danger');
+    }
+}
+
+
 
 function showAddTransaction() {
     const content = document.getElementById('content');
