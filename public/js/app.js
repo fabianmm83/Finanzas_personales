@@ -578,10 +578,9 @@ function updateFinancialSummary(summary) {
 
 
 
-// Función para procesar fecha de transacción - MEJORADA
-// app.js - REEMPLAZA la función processTransactionDate existente
+
 function processTransactionDate(transaction) {
-    // Si la transacción ya tiene la fecha procesada correctamente, usarla directamente
+    
     if (transaction.date instanceof Date && !isNaN(transaction.date.getTime())) {
         return transaction.date;
     }
@@ -591,14 +590,13 @@ function processTransactionDate(transaction) {
         return transactionManager.processTransactionDate(transaction);
     }
     
-    // Fallback
+    
     console.warn('⚠️ Usando fecha actual como fallback');
     return new Date();
 }
 
 
-// FUNCIÓN MEJORADA: Actualizar lista de transacciones con botones de editar/eliminar
-// app.js - MEJORA la función updateTransactionsList
+
 function updateTransactionsList(transactions) {
     const transactionsList = document.getElementById('transactions-list');
     if (!transactionsList) {
@@ -701,8 +699,7 @@ function updateTransactionsList(transactions) {
 
 
 
-// FUNCIÓN MEJORADA: Generar gráficos con selector de timeframe
-// FUNCIÓN MEJORADA: Generar gráficos con selector de timeframe y tipo de gráfica
+
 function generateCharts(dashboardData, timeframe = 'week', chartType = 'doughnut') {
     // Destruir gráficos existentes
     destroyCharts();
@@ -955,8 +952,8 @@ async function loadDashboardData(year, month, timeframe = 'week', chartType = 'd
     }
 }
 
-// AGREGAR esta variable global al inicio del archivo
-let currentChartType = 'doughnut'; // 'doughnut' o 'bar'
+
+let currentChartType = 'doughnut'; 
 
 // MODIFICA reloadDashboardWithChartType
 function reloadDashboardWithChartType(chartType) {
