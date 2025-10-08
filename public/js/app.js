@@ -1208,38 +1208,23 @@ async function deleteTransaction(transactionId) {
 function showEditTransactionForm(transaction) {
     const content = document.getElementById('content');
     
-    // CORRECCIÓN: Manejar mejor el formato de fecha CON AJUSTE DE ZONA HORARIA
+    // CORRECCIÓN COMPLETA: Usar función utilitaria para fecha
     let formattedDate;
     try {
         const date = processTransactionDate(transaction);
         
         // Verificar si la fecha es válida
         if (date instanceof Date && !isNaN(date.getTime())) {
-            // CORRECCIÓN ZONA HORARIA: Ajustar para input type="date"
-            const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
-            const year = localDate.getFullYear();
-            const month = String(localDate.getMonth() + 1).padStart(2, '0');
-            const day = String(localDate.getDate()).padStart(2, '0');
-            formattedDate = `${year}-${month}-${day}`;
+            formattedDate = adjustDateForInput(date);
         } else {
-            // Si la fecha no es válida, usar la fecha actual ajustada
+            // Si la fecha no es válida, usar la fecha actual
             console.warn('Fecha inválida, usando fecha actual');
-            const today = new Date();
-            const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
-            const year = localDate.getFullYear();
-            const month = String(localDate.getMonth() + 1).padStart(2, '0');
-            const day = String(localDate.getDate()).padStart(2, '0');
-            formattedDate = `${year}-${month}-${day}`;
+            formattedDate = adjustDateForInput(new Date());
         }
     } catch (error) {
         console.error('Error procesando fecha:', error);
-        // Usar fecha actual ajustada como fallback
-        const today = new Date();
-        const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
-        const year = localDate.getFullYear();
-        const month = String(localDate.getMonth() + 1).padStart(2, '0');
-        const day = String(localDate.getDate()).padStart(2, '0');
-        formattedDate = `${year}-${month}-${day}`;
+        // Usar fecha actual como fallback
+        formattedDate = adjustDateForInput(new Date());
     }
     
     content.innerHTML = `
@@ -1301,17 +1286,24 @@ function showEditTransactionForm(transaction) {
     document.getElementById('edit-transaction-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // CORRECCIÓN: Ajustar la fecha desde el input para mantener el día correcto
+        // CORRECCIÓN: Usar función utilitaria para procesar fecha
         const rawDate = document.getElementById('edit-transaction-date').value;
-        const adjustedDate = new Date(rawDate + 'T00:00:00'); // Agregar hora para evitar problema de zona horaria
+        const adjustedDate = adjustDateFromInput(rawDate);
         
         const transactionData = {
             type: document.getElementById('edit-transaction-type').value,
             amount: parseFloat(document.getElementById('edit-transaction-amount').value),
             category: document.getElementById('edit-transaction-category').value,
-            date: adjustedDate.toISOString().split('T')[0], // Enviar como YYYY-MM-DD
+            date: adjustedDate.toISOString(), // Enviar como ISO string completo
             description: document.getElementById('edit-transaction-description').value
         };
+
+        console.log('📅 Fecha enviada al backend:', {
+            raw: rawDate,
+            adjusted: adjustedDate,
+            iso: adjustedDate.toISOString(),
+            local: adjustedDate.toLocaleDateString('es-ES')
+        });
 
         try {
             await transactionManager.updateTransaction(transaction.id, transactionData);
@@ -1323,7 +1315,6 @@ function showEditTransactionForm(transaction) {
         }
     });
 }
-
 
 function showAddTransaction() {
     const content = document.getElementById('content');
@@ -1380,25 +1371,30 @@ function showAddTransaction() {
         </div>
     `;
 
-    // CORRECCIÓN: Establecer fecha actual ajustada para zona horaria
-    const today = new Date();
-    const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
-    document.getElementById('transaction-date').valueAsDate = localDate;
+    // CORRECCIÓN: Usar función utilitaria para fecha por defecto
+    document.getElementById('transaction-date').value = adjustDateForInput(new Date());
 
     document.getElementById('add-transaction-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // CORRECCIÓN: Ajustar la fecha desde el input para mantener el día correcto
+        // CORRECCIÓN: Usar función utilitaria para procesar fecha
         const rawDate = document.getElementById('transaction-date').value;
-        const adjustedDate = new Date(rawDate + 'T00:00:00'); // Agregar hora para evitar problema de zona horaria
+        const adjustedDate = adjustDateFromInput(rawDate);
         
         const transactionData = {
             type: document.getElementById('transaction-type').value,
             amount: parseFloat(document.getElementById('transaction-amount').value),
             category: document.getElementById('transaction-category').value,
-            date: adjustedDate.toISOString().split('T')[0], // Enviar como YYYY-MM-DD
+            date: adjustedDate.toISOString(), // Enviar como ISO string completo
             description: document.getElementById('transaction-description').value
         };
+
+        console.log('📅 Fecha enviada al backend:', {
+            raw: rawDate,
+            adjusted: adjustedDate,
+            iso: adjustedDate.toISOString(),
+            local: adjustedDate.toLocaleDateString('es-ES')
+        });
 
         try {
             await transactionManager.addTransaction(transactionData);
@@ -1413,7 +1409,24 @@ function showAddTransaction() {
 
 
 
+// FUNCIONES UTILITARIAS PARA MANEJO DE FECHAS
+function adjustDateForInput(date) {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+        date = new Date();
+    }
+    // Ajustar para input type="date" (convertir a fecha local sin zona horaria)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
+function adjustDateFromInput(dateString) {
+    // El input type="date" devuelve YYYY-MM-DD en zona horaria local
+    // Crear fecha en hora local para evitar problemas de zona horaria
+    const [year, month, day] = dateString.split('-');
+    return new Date(year, month - 1, day, 12, 0, 0); // Usar mediodía para evitar problemas de zona horaria
+}
 
 
 

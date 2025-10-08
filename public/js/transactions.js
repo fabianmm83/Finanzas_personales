@@ -134,7 +134,7 @@ async getTransactionsDirect(filters = {}) {
             }
         }
 
-// transactions.js - ACTUALIZA processTransactionDate
+// transactions.js - ACTUALIZA processTransactionDate para mejor manejo
 processTransactionDate(transaction) {
     try {
         console.log('🔍 TRANSACCIÓN COMPLETA en processTransactionDate:', transaction);
@@ -180,11 +180,6 @@ processTransactionDate(transaction) {
                 if (date instanceof Date && !isNaN(date.getTime())) {
                     return date;
                 }
-            }
-            
-            // Si es un objeto vacío
-            if (Object.keys(dateData).length === 0) {
-                console.error('❌ Objeto date vacío recibido - problema de serialización');
             }
         }
         
