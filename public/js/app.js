@@ -1208,34 +1208,37 @@ async function deleteTransaction(transactionId) {
 function showEditTransactionForm(transaction) {
     const content = document.getElementById('content');
     
-    // CORRECCIÓN: Manejar mejor el formato de fecha
+    // CORRECCIÓN: Manejar mejor el formato de fecha CON AJUSTE DE ZONA HORARIA
     let formattedDate;
     try {
         const date = processTransactionDate(transaction);
         
         // Verificar si la fecha es válida
         if (date instanceof Date && !isNaN(date.getTime())) {
-            // Formatear a YYYY-MM-DD para input type="date"
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
+            // CORRECCIÓN ZONA HORARIA: Ajustar para input type="date"
+            const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+            const year = localDate.getFullYear();
+            const month = String(localDate.getMonth() + 1).padStart(2, '0');
+            const day = String(localDate.getDate()).padStart(2, '0');
             formattedDate = `${year}-${month}-${day}`;
         } else {
-            // Si la fecha no es válida, usar la fecha actual
+            // Si la fecha no es válida, usar la fecha actual ajustada
             console.warn('Fecha inválida, usando fecha actual');
             const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
+            const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
+            const year = localDate.getFullYear();
+            const month = String(localDate.getMonth() + 1).padStart(2, '0');
+            const day = String(localDate.getDate()).padStart(2, '0');
             formattedDate = `${year}-${month}-${day}`;
         }
     } catch (error) {
         console.error('Error procesando fecha:', error);
-        // Usar fecha actual como fallback
+        // Usar fecha actual ajustada como fallback
         const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
+        const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
+        const year = localDate.getFullYear();
+        const month = String(localDate.getMonth() + 1).padStart(2, '0');
+        const day = String(localDate.getDate()).padStart(2, '0');
         formattedDate = `${year}-${month}-${day}`;
     }
     
@@ -1298,11 +1301,15 @@ function showEditTransactionForm(transaction) {
     document.getElementById('edit-transaction-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        // CORRECCIÓN: Ajustar la fecha desde el input para mantener el día correcto
+        const rawDate = document.getElementById('edit-transaction-date').value;
+        const adjustedDate = new Date(rawDate + 'T00:00:00'); // Agregar hora para evitar problema de zona horaria
+        
         const transactionData = {
             type: document.getElementById('edit-transaction-type').value,
             amount: parseFloat(document.getElementById('edit-transaction-amount').value),
             category: document.getElementById('edit-transaction-category').value,
-            date: document.getElementById('edit-transaction-date').value,
+            date: adjustedDate.toISOString().split('T')[0], // Enviar como YYYY-MM-DD
             description: document.getElementById('edit-transaction-description').value
         };
 
@@ -1316,6 +1323,98 @@ function showEditTransactionForm(transaction) {
         }
     });
 }
+
+
+function showAddTransaction() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">
+                                <i class="fas fa-plus-circle text-primary me-2"></i>
+                                Agregar Transacción
+                            </h2>
+                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                        
+                        <form id="add-transaction-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="transaction-type" class="form-label">Tipo</label>
+                                    <select class="form-select" id="transaction-type" required>
+                                        <option value="income">Ingreso</option>
+                                        <option value="expense">Gasto</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="transaction-amount" class="form-label">Monto ($)</label>
+                                    <input type="number" step="0.01" class="form-control" id="transaction-amount" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="transaction-category" class="form-label">Categoría</label>
+                                <input type="text" class="form-control" id="transaction-category" placeholder="Ej: Salario, Comida, Transporte..." required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="transaction-date" class="form-label">Fecha</label>
+                                <input type="date" class="form-control" id="transaction-date" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="transaction-description" class="form-label">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="transaction-description" rows="2" placeholder="Descripción adicional..."></textarea>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save me-2"></i>Guardar Transacción
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // CORRECCIÓN: Establecer fecha actual ajustada para zona horaria
+    const today = new Date();
+    const localDate = new Date(today.getTime() - (today.getTimezoneOffset() * 60000));
+    document.getElementById('transaction-date').valueAsDate = localDate;
+
+    document.getElementById('add-transaction-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // CORRECCIÓN: Ajustar la fecha desde el input para mantener el día correcto
+        const rawDate = document.getElementById('transaction-date').value;
+        const adjustedDate = new Date(rawDate + 'T00:00:00'); // Agregar hora para evitar problema de zona horaria
+        
+        const transactionData = {
+            type: document.getElementById('transaction-type').value,
+            amount: parseFloat(document.getElementById('transaction-amount').value),
+            category: document.getElementById('transaction-category').value,
+            date: adjustedDate.toISOString().split('T')[0], // Enviar como YYYY-MM-DD
+            description: document.getElementById('transaction-description').value
+        };
+
+        try {
+            await transactionManager.addTransaction(transactionData);
+            showToast('Transacción agregada correctamente', 'success');
+            loadDashboard(auth.currentUser);
+        } catch (error) {
+            console.error('Error guardando transacción:', error);
+            showToast('Error al guardar la transacción', 'danger');
+        }
+    });
+}
+
+
+
+
+
 
 
 
@@ -1746,85 +1845,8 @@ async function deleteBudget(budgetId) {
 
 
 
-function showAddTransaction() {
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h2 class="mb-0">
-                                <i class="fas fa-plus-circle text-primary me-2"></i>
-                                Agregar Transacción
-                            </h2>
-                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
-                                <i class="fas fa-arrow-left me-1"></i> Volver
-                            </button>
-                        </div>
-                        
-                        <form id="add-transaction-form">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="transaction-type" class="form-label">Tipo</label>
-                                    <select class="form-select" id="transaction-type" required>
-                                        <option value="income">Ingreso</option>
-                                        <option value="expense">Gasto</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="transaction-amount" class="form-label">Monto ($)</label>
-                                    <input type="number" step="0.01" class="form-control" id="transaction-amount" required>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="transaction-category" class="form-label">Categoría</label>
-                                <input type="text" class="form-control" id="transaction-category" placeholder="Ej: Salario, Comida, Transporte..." required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="transaction-date" class="form-label">Fecha</label>
-                                <input type="date" class="form-control" id="transaction-date" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="transaction-description" class="form-label">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="transaction-description" rows="2" placeholder="Descripción adicional..."></textarea>
-                            </div>
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    <i class="fas fa-save me-2"></i>Guardar Transacción
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
 
-    // Set today's date as default
-    document.getElementById('transaction-date').valueAsDate = new Date();
 
-    document.getElementById('add-transaction-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const transactionData = {
-            type: document.getElementById('transaction-type').value,
-            amount: parseFloat(document.getElementById('transaction-amount').value),
-            category: document.getElementById('transaction-category').value,
-            date: document.getElementById('transaction-date').value,
-            description: document.getElementById('transaction-description').value
-        };
-
-        try {
-            await transactionManager.addTransaction(transactionData);
-            showToast('Transacción agregada correctamente', 'success');
-            loadDashboard(auth.currentUser);
-        } catch (error) {
-            console.error('Error guardando transacción:', error);
-            showToast('Error al guardar la transacción', 'danger');
-        }
-    });
-}
 
 function showAddBudget() {
     const now = new Date();
