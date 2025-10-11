@@ -315,22 +315,26 @@ function loadDashboard(user) {
                 </p>
             </div>
 
-            <!-- Resumen Financiero Mejorado - MOVIDO ARRIBA -->
+            <!-- Resumen Financiero Mejorado - EN UNA SOLA FILA -->
             <div class="row mb-4" id="financial-summary">
                 <!-- Se llenará dinámicamente -->
             </div>
 
-            <!-- Botones principales -->
-            <div class="text-center mb-4">
-                <button class="btn btn-primary me-2" onclick="showAddBudget()">
-                    <i class="fas fa-plus-circle"></i> Agregar Presupuesto
-                </button>
-                <button class="btn btn-info me-2" onclick="showBudgetsPage()">
-                    <i class="fas fa-chart-pie"></i> Ver Mis Presupuestos
-                </button>
-                <button class="btn btn-success" onclick="showAddTransaction()">
-                    <i class="fas fa-plus"></i> Nueva Transacción
-                </button>
+            <!-- Botones principales EN UNA SOLA FILA -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <button class="btn btn-primary" onclick="showAddBudget()">
+                            <i class="fas fa-plus-circle me-2"></i>Agregar Presupuesto
+                        </button>
+                        <button class="btn btn-info" onclick="showBudgetsPage()">
+                            <i class="fas fa-chart-pie me-2"></i>Ver Mis Presupuestos
+                        </button>
+                        <button class="btn btn-success" onclick="showAddTransaction()">
+                            <i class="fas fa-plus me-2"></i>Nueva Transacción
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Filtros Avanzados - MOVIDO ABAJO -->
@@ -517,10 +521,7 @@ async function loadDashboardData(year, month, timeframe = 'week') {
 // Función para actualizar el resumen financiero
 function updateFinancialSummary(summary) {
     const financialSummary = document.getElementById('financial-summary');
-    if (!financialSummary) {
-        console.error('❌ Elemento financial-summary no encontrado');
-        return;
-    }
+    if (!financialSummary) return;
 
     const ahorroPotencial = summary.totalIncome * 0.2;
     const daysInMonth = new Date(summary.year, summary.month, 0).getDate();
@@ -530,43 +531,42 @@ function updateFinancialSummary(summary) {
     
     const summaryHTML = `
         <div class="col-md-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Total Ingresos</h5>
-                    <p class="card-text h4">$${summary.totalIncome.toFixed(2)}</p>
+            <div class="card border-success h-100">
+                <div class="card-body text-center p-2">
+                    <i class="fas fa-arrow-down text-success fa-lg mb-2"></i>
+                    <h6 class="card-title text-success mb-1">INGRESOS</h6>
+                    <p class="card-text h5 text-success mb-1">$${summary.totalIncome.toFixed(2)}</p>
+                    <small class="text-muted">Total del mes</small>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Total Gastos</h5>
-                    <p class="card-text h4">$${summary.totalExpense.toFixed(2)}</p>
+            <div class="card border-danger h-100">
+                <div class="card-body text-center p-2">
+                    <i class="fas fa-arrow-up text-danger fa-lg mb-2"></i>
+                    <h6 class="card-title text-danger mb-1">GASTOS</h6>
+                    <p class="card-text h5 text-danger mb-1">$${summary.totalExpense.toFixed(2)}</p>
+                    <small class="text-muted">Total del mes</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card ${summary.balance >= 0 ? 'bg-primary' : 'bg-warning'} text-white h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Balance</h5>
-                    <p class="card-text h4">$${summary.balance.toFixed(2)}</p>
+        <div class="col-md-3">
+            <div class="card ${summary.balance >= 0 ? 'border-primary' : 'border-warning'} h-100">
+                <div class="card-body text-center p-2">
+                    <i class="fas fa-balance-scale ${summary.balance >= 0 ? 'text-primary' : 'text-warning'} fa-lg mb-2"></i>
+                    <h6 class="card-title ${summary.balance >= 0 ? 'text-primary' : 'text-warning'} mb-1">BALANCE</h6>
+                    <p class="card-text h5 ${summary.balance >= 0 ? 'text-primary' : 'text-warning'} mb-1">$${summary.balance.toFixed(2)}</p>
+                    <small class="text-muted">${summary.balance >= 0 ? '👍 Positivo' : '👎 Negativo'}</small>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card bg-info text-white h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Ahorro Ideal</h5>
-                    <p class="card-text h4">$${ahorroPotencial.toFixed(2)}</p>
-                    <small class="text-white-50">(20% de ingresos)</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card bg-secondary text-white h-100">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Gasto Diario</h5>
-                    <p class="card-text h4">$${gastoDiarioPromedio.toFixed(2)}</p>
+        <div class="col-md-3">
+            <div class="card border-info h-100">
+                <div class="card-body text-center p-2">
+                    <i class="fas fa-fire text-info fa-lg mb-2"></i>
+                    <h6 class="card-title text-info mb-1">GASTO DIARIO</h6>
+                    <p class="card-text h5 text-info mb-1">$${gastoDiarioPromedio.toFixed(2)}</p>
+                    <small class="text-muted">Día ${daysPassed}/${daysInMonth}</small>
                 </div>
             </div>
         </div>
@@ -574,7 +574,6 @@ function updateFinancialSummary(summary) {
     
     financialSummary.innerHTML = summaryHTML;
 }
-
 
 
 
@@ -951,7 +950,7 @@ async function loadDashboardData(year, month, timeframe = 'week', chartType = 'd
 
 let currentChartType = 'doughnut'; 
 
-// MODIFICA reloadDashboardWithChartType
+//  reloadDashboardWithChartType
 function reloadDashboardWithChartType(chartType) {
     currentChartType = chartType;
     const now = new Date();
