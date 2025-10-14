@@ -7,6 +7,237 @@ let chartInstances = {
 
 let currentTimeframe = 'week'; // 'week' o 'month'
 
+// ==================== NOTIFICATION MANAGER ====================
+// Agrega esto JUSTO DESPUÉS de tus otros managers y ANTES de initializeApp
+
+class NotificationManager {
+    constructor() {
+        this.notificationPermission = null;
+        this.dailyReminderTimeout = null;
+        this.upcomingTransactionsCheck = null;
+        this.init();
+    }
+
+    async init() {
+        await this.requestPermission();
+        this.scheduleDailyReminder();
+        this.scheduleUpcomingTransactionsCheck();
+    }
+
+    // Solicitar permiso para notificaciones
+    async requestPermission() {
+        if (!('Notification' in window)) {
+            console.log('Este navegador no soporta notificaciones');
+            return false;
+        }
+
+        try {
+            this.notificationPermission = await Notification.requestPermission();
+            console.log('Estado de permisos de notificación:', this.notificationPermission);
+            return this.notificationPermission === 'granted';
+        } catch (error) {
+            console.error('Error solicitando permisos:', error);
+            return false;
+        }
+    }
+
+    // Mostrar notificación
+    showNotification(title, options = {}) {
+        if (this.notificationPermission !== 'granted') {
+            console.log('Permisos de notificación no concedidos');
+            return;
+        }
+
+        const defaultOptions = {
+            icon: '/static/logo_pwa.png',
+            badge: '/static/logo_pwa.png',
+            tag: 'finances-reminder',
+            requireInteraction: false,
+            silent: false
+        };
+
+        const notificationOptions = { ...defaultOptions, ...options };
+
+        // Verificar si es una PWA instalada o navegador
+        if (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+            // En PWA, usar Service Worker si está disponible
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(title, notificationOptions);
+                });
+            } else {
+                // Fallback a Notification API
+                new Notification(title, notificationOptions);
+            }
+        } else {
+            // En navegador normal
+            new Notification(title, notificationOptions);
+        }
+    }
+
+    // Notificación diaria "No olvides agregar tus finanzas"
+    scheduleDailyReminder() {
+        // Limpiar timeout anterior si existe
+        if (this.dailyReminderTimeout) {
+            clearTimeout(this.dailyReminderTimeout);
+        }
+
+        // Programar para mañana a las 18:00 (6 PM)
+        const now = new Date();
+        const targetTime = new Date();
+        targetTime.setHours(18, 0, 0, 0); // 6 PM
+
+        // Si ya pasó las 6 PM hoy, programar para mañana
+        if (now > targetTime) {
+            targetTime.setDate(targetTime.getDate() + 1);
+        }
+
+        const timeUntilReminder = targetTime.getTime() - now.getTime();
+
+        this.dailyReminderTimeout = setTimeout(() => {
+            this.showDailyReminder();
+            // Programar la próxima para mañana
+            this.scheduleDailyReminder();
+        }, timeUntilReminder);
+
+        console.log(`Recordatorio diario programado para: ${targetTime}`);
+    }
+
+    showDailyReminder() {
+        this.showNotification('💡 Recordatorio de Finanzas', {
+            body: 'No olvides registrar tus transacciones del día',
+            icon: '/static/logo_pwa.png',
+            badge: '/static/logo_pwa.png',
+            actions: [
+                {
+                    action: 'add-transaction',
+                    title: 'Agregar Transacción'
+                },
+                {
+                    action: 'view-dashboard',
+                    title: 'Ver Dashboard'
+                }
+            ]
+        });
+
+        // También mostrar toast en la app
+        if (typeof showToast === 'function') {
+            showToast('💡 No olvides registrar tus transacciones del día', 'info');
+        }
+    }
+
+    // Verificar transacciones próximas a vencer
+    async scheduleUpcomingTransactionsCheck() {
+        // Verificar cada hora
+        this.upcomingTransactionsCheck = setInterval(async () => {
+            await this.checkUpcomingTransactions();
+        }, 60 * 60 * 1000); // Cada hora
+
+        // Verificar inmediatamente al cargar
+        setTimeout(() => this.checkUpcomingTransactions(), 5000);
+    }
+
+    async checkUpcomingTransactions() {
+        if (!auth || !auth.currentUser) return;
+
+        try {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            // Obtener transacciones recurrentes o con fechas futuras
+            const transactionsRef = firestore.collection('users').doc(auth.currentUser.uid).collection('transactions');
+            const snapshot = await transactionsRef
+                .where('date', '>=', today.toISOString().split('T')[0])
+                .where('date', '<=', tomorrow.toISOString().split('T')[0])
+                .get();
+
+            const upcomingTransactions = [];
+            snapshot.forEach(doc => {
+                const transaction = doc.data();
+                if (this.isTransactionUpcoming(transaction)) {
+                    upcomingTransactions.push(transaction);
+                }
+            });
+
+            // Mostrar notificación si hay transacciones próximas
+            if (upcomingTransactions.length > 0) {
+                this.showUpcomingTransactionsAlert(upcomingTransactions);
+            }
+
+        } catch (error) {
+            console.error('Error verificando transacciones próximas:', error);
+        }
+    }
+
+    isTransactionUpcoming(transaction) {
+        const transactionDate = new Date(transaction.date);
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Verificar si la transacción es para mañana
+        return transactionDate.toDateString() === tomorrow.toDateString();
+    }
+
+    showUpcomingTransactionsAlert(transactions) {
+        const count = transactions.length;
+        const transactionTypes = transactions.reduce((acc, transaction) => {
+            acc[transaction.type] = (acc[transaction.type] || 0) + 1;
+            return acc;
+        }, {});
+
+        let body = `Tienes ${count} transacción(es) para mañana:`;
+        
+        if (transactionTypes.income) {
+            body += ` ${transactionTypes.income} ingreso(s)`;
+        }
+        if (transactionTypes.expense) {
+            body += ` ${transactionTypes.expense} gasto(s)`;
+        }
+
+        this.showNotification('📅 Transacciones Próximas', {
+            body: body,
+            icon: '/static/logo_pwa.png',
+            badge: '/static/logo_pwa.png',
+            tag: 'upcoming-transactions',
+            requireInteraction: true
+        });
+
+        // Toast en la app
+        if (typeof showToast === 'function') {
+            showToast(`📅 Tienes ${count} transacción(es) para mañana`, 'warning');
+        }
+    }
+
+    // Método para reiniciar notificaciones
+    restart() {
+        this.cleanup();
+        this.init();
+    }
+
+    // Limpiar todos los timeouts e intervals
+    cleanup() {
+        if (this.dailyReminderTimeout) {
+            clearTimeout(this.dailyReminderTimeout);
+        }
+        if (this.upcomingTransactionsCheck) {
+            clearInterval(this.upcomingTransactionsCheck);
+        }
+    }
+}
+
+// Variable global para el manager de notificaciones
+let notificationManager;
+
+
+
+
+
+
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM cargado - Iniciando aplicación");
     initializeApp();
@@ -35,8 +266,22 @@ function initializeApp() {
         window.budgetManager = new BudgetManager();
     }
     
+    // INICIALIZAR NOTIFICATION MANAGER - NUEVO
+    if (typeof notificationManager === 'undefined') {
+        console.log("Inicializando NotificationManager...");
+        try {
+            window.notificationManager = new NotificationManager();
+            console.log("✅ NotificationManager inicializado correctamente");
+        } catch (error) {
+            console.error("❌ Error inicializando NotificationManager:", error);
+        }
+    }
+    
     // Configurar navegación
     setupNavigation();
+    
+    // Configurar Service Worker para notificaciones
+    setupServiceWorkerNotifications();
     
     // Escuchar cambios de autenticación
     auth.onAuthStateChanged((user) => {
@@ -47,8 +292,18 @@ function initializeApp() {
         
         if (user) {
             loadDashboard(user);
+            
+            // Reiniciar notificaciones si el usuario está logueado
+            if (notificationManager && typeof notificationManager.restart === 'function') {
+                notificationManager.restart();
+            }
         } else {
             loadLoginPage();
+            
+            // Limpiar notificaciones si el usuario cierra sesión
+            if (notificationManager && typeof notificationManager.cleanup === 'function') {
+                notificationManager.cleanup();
+            }
         }
         showLoading(false);
     }, (error) => {
@@ -57,6 +312,31 @@ function initializeApp() {
         showLoading(false);
     });
 }
+
+// Función para configurar el Service Worker con notificaciones
+function setupServiceWorkerNotifications() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', event => {
+            const { action } = event.data;
+            console.log('Mensaje recibido del Service Worker:', action);
+            
+            if (action === 'add-transaction') {
+                // Navegar a agregar transacción
+                if (typeof showAddTransactionModal === 'function') {
+                    showAddTransactionModal();
+                } else if (auth.currentUser) {
+                    loadAddTransactionPage(auth.currentUser);
+                }
+            } else if (action === 'view-dashboard') {
+                // Navegar al dashboard
+                if (auth.currentUser) {
+                    loadDashboard(auth.currentUser);
+                }
+            }
+        });
+    }
+}
+
 
 // Configurar navegación
 function setupNavigation() {
@@ -2297,6 +2577,11 @@ function addLifeWheelStyles() {
 document.addEventListener('DOMContentLoaded', function() {
     addLifeWheelStyles();
 });
+
+
+
+
+
 
 
 

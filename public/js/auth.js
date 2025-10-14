@@ -60,12 +60,66 @@ function loginWithEmail(email, password) {
 
 // Función para logout
 function logout() {
+    console.log("Cerrando sesión...");
+    
+    // LIMPIAR NOTIFICACIONES AL CERRAR SESIÓN - NUEVO
+    if (typeof notificationManager !== 'undefined' && notificationManager && typeof notificationManager.cleanup === 'function') {
+        console.log("Limpiando notificaciones programadas...");
+        notificationManager.cleanup();
+    } else {
+        console.log("NotificationManager no disponible para limpiar");
+    }
+    
     auth.signOut()
         .then(() => {
             console.log("Logout exitoso");
             showToast('Sesión cerrada', 'info');
+            
+            // También limpiar notificaciones del navegador
+            if ('Notification' in window && Notification.permission === 'granted') {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    registrations.forEach(function(registration) {
+                        registration.unregister();
+                    });
+                });
+            }
         })
         .catch((error) => {
             console.error("Error en logout:", error);
-        });
+            showToast('Error al cerrar sesión: ' + error.message, 'danger');
+        }); 
+}
+
+// Función para actualizar la barra de navegación con el estado de notificaciones
+function updateNavbar(user) {
+    const navLogin = document.getElementById('nav-login');
+    const navLogout = document.getElementById('nav-logout');
+    const navProfile = document.getElementById('nav-profile');
+    const navAddTransaction = document.getElementById('nav-add-transaction');
+    
+    if (user) {
+        // Usuario logueado
+        if (navLogin) navLogin.style.display = 'none';
+        if (navLogout) navLogout.style.display = 'block';
+        if (navProfile) navProfile.style.display = 'block';
+        if (navAddTransaction) navAddTransaction.style.display = 'block';
+        
+        // Reiniciar notificaciones si el manager existe
+        if (typeof notificationManager !== 'undefined' && notificationManager && typeof notificationManager.restart === 'function') {
+            setTimeout(() => {
+                notificationManager.restart();
+            }, 1000);
+        }
+    } else {
+        // Usuario no logueado
+        if (navLogin) navLogin.style.display = 'block';
+        if (navLogout) navLogout.style.display = 'none';
+        if (navProfile) navProfile.style.display = 'none';
+        if (navAddTransaction) navAddTransaction.style.display = 'none';
+        
+        // Limpiar notificaciones
+        if (typeof notificationManager !== 'undefined' && notificationManager && typeof notificationManager.cleanup === 'function') {
+            notificationManager.cleanup();
+        }
+    }
 }
