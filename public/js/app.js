@@ -1081,9 +1081,10 @@ function setupNavigation() {
     console.log('✅ Navegación configurada correctamente');
 }
 
-// Función para actualizar la barra de navegación - VERSIÓN CORREGIDA
 function updateNavbar(user) {
-    console.log('🔄 Actualizando navbar...');
+    console.log('🔄 Actualizando navbar...', { 
+        user: user ? user.email : 'null'
+    });
     
     const navHome = document.getElementById('nav-home');
     const navProfile = document.getElementById('nav-profile');
@@ -1092,30 +1093,54 @@ function updateNavbar(user) {
     const navLogin = document.getElementById('nav-login');
 
     if (user) {
-        // Usuario logueado
+        // Usuario logueado - MOSTRAR elementos de usuario
         console.log('✅ Mostrando navbar para usuario logueado');
         
-        if (navHome) navHome.parentElement.style.display = 'block';
-        if (navProfile) navProfile.parentElement.style.display = 'block';
-        if (navAddTransaction) navAddTransaction.parentElement.style.display = 'block';
+        if (navHome) {
+            navHome.parentElement.style.display = 'block';
+            navHome.style.display = 'block';
+        }
+        if (navProfile) {
+            navProfile.parentElement.style.display = 'block';
+            navProfile.style.display = 'block';
+        }
+        if (navAddTransaction) {
+            navAddTransaction.parentElement.style.display = 'block';
+            navAddTransaction.style.display = 'block';
+        }
         if (navLogout) {
             navLogout.parentElement.style.display = 'block';
-            // Asegurar que el texto sea visible
+            navLogout.style.display = 'block'; // ✅ ESTA ES LA LÍNEA CLAVE
             navLogout.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>';
         }
-        if (navLogin) navLogin.parentElement.style.display = 'none';
+        if (navLogin) {
+            navLogin.parentElement.style.display = 'none';
+            navLogin.style.display = 'none';
+        }
         
     } else {
-        // Usuario no logueado
+        // Usuario no logueado - MOSTRAR solo login
         console.log('✅ Mostrando navbar para usuario no logueado');
         
-        if (navHome) navHome.parentElement.style.display = 'none';
-        if (navProfile) navProfile.parentElement.style.display = 'none';
-        if (navAddTransaction) navAddTransaction.parentElement.style.display = 'none';
-        if (navLogout) navLogout.parentElement.style.display = 'none';
+        if (navHome) {
+            navHome.parentElement.style.display = 'none';
+            navHome.style.display = 'none';
+        }
+        if (navProfile) {
+            navProfile.parentElement.style.display = 'none';
+            navProfile.style.display = 'none';
+        }
+        if (navAddTransaction) {
+            navAddTransaction.parentElement.style.display = 'none';
+            navAddTransaction.style.display = 'none';
+        }
+        if (navLogout) {
+            navLogout.parentElement.style.display = 'none';
+            navLogout.style.display = 'none';
+        }
         if (navLogin) {
             navLogin.parentElement.style.display = 'block';
-            navLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Iniciar Sesión</span>';
+            navLogin.style.display = 'block';
         }
     }
 }
