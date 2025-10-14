@@ -6,47 +6,93 @@
     <title>Finanzas Personales</title>
     
     <!-- PWA Meta Tags -->
-<meta name="theme-color" content="#2c3e50">
-<meta name="description" content="Aplicación de Finanzas Personales - Controla tus gastos e ingresos">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Finanzas Personales">
+    <meta name="theme-color" content="#2c3e50" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+    <meta name="description" content="Aplicación de Finanzas Personales - Controla tus gastos e ingresos">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Finanzas Personales">
 
-<!-- PWA Links -->
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" href="/static/logo_pwa.png">
-<link rel="apple-touch-icon" href="/static/logo_pwa.png">
+    <!-- PWA Links -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/static/logo_pwa.png">
+    <link rel="apple-touch-icon" href="/static/logo_pwa.png">
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-   
-   <style>
+    <style>
         :root {
             --primary-color: #3498db;
             --secondary-color: #2ecc71;
             --dark-color: #2c3e50;
             --light-color: #ecf0f1;
             --danger-color: #e74c3c;
+            
+            /* Variables para modo oscuro */
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --footer-bg: #2c3e50;
+            --footer-text: #ffffff;
+            --navbar-bg: linear-gradient(135deg, var(--dark-color), #34495e);
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        /* Modo oscuro */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #121212;
+                --text-color: #e0e0e0;
+                --card-bg: #1e1e1e;
+                --footer-bg: #000000;
+                --footer-text: #e0e0e0;
+                --navbar-bg: linear-gradient(135deg, #121212, #2c2c2c);
+                --card-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            }
+            
+            .card {
+                border: 1px solid #333;
+            }
+            
+            .form-control, .form-select {
+                background-color: #2d2d2d;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+            
+            .form-control:focus, .form-select:focus {
+                background-color: #2d2d2d;
+                border-color: var(--primary-color);
+                color: #e0e0e0;
+            }
+            
+            .table {
+                --bs-table-bg: var(--card-bg);
+                --bs-table-color: var(--text-color);
+                --bs-table-border-color: #444;
+            }
         }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-            color: #333;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             line-height: 1.6;
             padding-top: 80px; /* Para la navbar fija */
+            transition: background-color 0.3s, color 0.3s;
         }
         
         .navbar {
-            background: linear-gradient(135deg, var(--dark-color), #34495e);
+            background: var(--navbar-bg);
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             z-index: 1030;
+            transition: background 0.3s;
         }
         
         .navbar-brand {
@@ -61,14 +107,17 @@
             width: auto;
             margin-right: 10px;
             object-fit: contain;
+            border-radius: 10px; /* Bordes redondeados para el logo */
         }
         
         .card {
             border: none;
             border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-shadow: var(--card-shadow);
             transition: transform 0.3s ease;
             margin-bottom: 20px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
         
         .card:hover {
@@ -129,6 +178,88 @@
             margin: 0 auto 1rem auto; /* Centrado */
             display: block; /* Para que funcione margin auto */
             object-fit: contain;
+            border-radius: 15px; /* Bordes más redondeados para el logo de login */
+        }
+        
+        /* Pantalla de bienvenida */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--navbar-bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .welcome-logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 25px; /* Bordes muy redondeados para el logo de bienvenida */
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            background-color: var(--primary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 3rem;
+        }
+        
+        .welcome-text {
+            color: white;
+            text-align: center;
+            margin-top: 2rem;
+        }
+        
+        .welcome-text h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .welcome-text p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .loading-dots {
+            display: flex;
+            margin-top: 2rem;
+        }
+        
+        .loading-dots span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: white;
+            margin: 0 5px;
+            animation: loading 1.4s infinite ease-in-out;
+        }
+        
+        .loading-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .loading-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes loading {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
         
         /* Navbar en móviles - botones en línea */
@@ -181,6 +312,16 @@
             .login-logo {
                 height: 60px;
             }
+            
+            .welcome-logo {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5rem;
+            }
+            
+            .welcome-text h1 {
+                font-size: 2rem;
+            }
         }
         
         /* Logo más pequeño en móviles muy pequeños */
@@ -204,6 +345,16 @@
 
             .login-logo {
                 height: 50px;
+            }
+            
+            .welcome-logo {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+            
+            .welcome-text h1 {
+                font-size: 1.8rem;
             }
         }
         
@@ -232,10 +383,31 @@
             font-size: 0.9rem;
             padding: 6px 12px;
         }
+        
+        footer {
+            background-color: var(--footer-bg) !important;
+            color: var(--footer-text) !important;
+        }
     </style>
 
 </head>
 <body>
+    <!-- Pantalla de bienvenida -->
+    <div class="welcome-screen" id="welcome-screen">
+        <div class="welcome-logo">
+            <i class="fas fa-wallet"></i>
+        </div>
+        <div class="welcome-text">
+            <h1>Toro Tech</h1>
+            <p>Finanzas Personales</p>
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+    
     <!-- Barra de navegación fija -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
@@ -325,7 +497,7 @@
     <script src="/js/app.js"></script>
     
 
-        <script>
+    <script>
         // Script para manejar el logo y errores de imagen
         document.addEventListener('DOMContentLoaded', function() {
             const logo = document.querySelector('.logo-img');
@@ -341,6 +513,7 @@
                     this.style.width = 'auto';
                     this.style.objectFit = 'contain';
                     this.style.marginRight = '10px';
+                    this.style.borderRadius = '10px';
                 };
                 
                 // Forzar la carga si es necesario
@@ -359,6 +532,17 @@
                 const element = document.getElementById(id);
                 console.log(`Nav element ${id}:`, element ? '✅' : '❌');
             });
+            
+            // Mostrar pantalla de bienvenida por 3 segundos
+            setTimeout(function() {
+                const welcomeScreen = document.getElementById('welcome-screen');
+                if (welcomeScreen) {
+                    welcomeScreen.style.opacity = '0';
+                    setTimeout(function() {
+                        welcomeScreen.style.display = 'none';
+                    }, 500);
+                }
+            }, 3000);
         });
 
         // Función para manejar logos en páginas de login/registro
@@ -377,6 +561,7 @@
                 logo.onload = function() {
                     console.log('✅ Logo de login cargado correctamente');
                     this.style.display = 'block';
+                    this.style.borderRadius = '15px';
                 };
             });
         }
@@ -502,6 +687,43 @@
 
         // Verificar ícono al cargar
         window.addEventListener('load', checkPWAIcon);
+        
+        // Función auxiliar para mostrar toasts (si no existe)
+        function showToast(message, type = 'info') {
+            // Esta función debe estar implementada en tu app.js
+            // Si no existe, la creamos aquí como respaldo
+            if (typeof window.showToast !== 'function') {
+                console.log(`Toast (${type}): ${message}`);
+                
+                // Crear un toast básico si no existe la función
+                const toastContainer = document.getElementById('toast-container');
+                if (toastContainer) {
+                    const toastId = 'toast-' + Date.now();
+                    const toastHTML = `
+                        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    ${message}
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                            </div>
+                        </div>
+                    `;
+                    toastContainer.innerHTML += toastHTML;
+                    
+                    const toastElement = document.getElementById(toastId);
+                    const toast = new bootstrap.Toast(toastElement);
+                    toast.show();
+                    
+                    // Eliminar el toast del DOM después de que se oculte
+                    toastElement.addEventListener('hidden.bs.toast', function() {
+                        toastElement.remove();
+                    });
+                }
+            } else {
+                window.showToast(message, type);
+            }
+        }
     </script>
 </body>
 </html>
