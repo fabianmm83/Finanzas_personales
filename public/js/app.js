@@ -7,7 +7,7 @@ let chartInstances = {
 
 let currentTimeframe = 'week'; // 'week' o 'month'
 
-// ==================== NOTIFICATION MANAGER - VERSIÓN CORREGIDA ====================
+// ==================== NOTIFICATION MANAGER - VERSIÓN DEFINITIVA ====================
 class NotificationManager {
     constructor() {
         this.notificationPermission = null;
@@ -48,51 +48,52 @@ class NotificationManager {
         }
     }
 
-    // Mostrar notificación
-    // CORREGIDO: Mostrar notificación - versión compatible
-showNotification(title, options = {}) {
-    if (this.notificationPermission !== 'granted') {
-        console.log('Permisos de notificación no concedidos');
-        return;
-    }
-
-    const defaultOptions = {
-        icon: '/static/logo_pwa.png',
-        badge: '/static/logo_pwa.png',
-        tag: 'finances-reminder',
-        requireInteraction: false,
-        silent: false
-    };
-
-    const notificationOptions = { ...defaultOptions, ...options };
-
-    // VERIFICACIÓN MEJORADA: Remover acciones si no es a través de Service Worker
-    let finalOptions = { ...notificationOptions };
-    
-    // Si NO estamos usando Service Worker y hay acciones, removerlas
-    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
-        if (finalOptions.actions) {
-            console.log('⚠️ Acciones removidas (requieren Service Worker)');
-            delete finalOptions.actions;
+    // CORREGIDO: Mostrar notificación - versión definitiva
+    showNotification(title, options = {}) {
+        if (this.notificationPermission !== 'granted') {
+            console.log('Permisos de notificación no concedidos');
+            return;
         }
-    }
 
-    // Verificar si es una PWA instalada o navegador
-    if (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
-        // En PWA, usar Service Worker si está disponible
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const defaultOptions = {
+            icon: '/static/logo_pwa.png',
+            badge: '/static/logo_pwa.png',
+            tag: 'finances-reminder',
+            requireInteraction: false,
+            silent: false
+        };
+
+        const notificationOptions = { ...defaultOptions, ...options };
+
+        // DETECCIÓN INTELIGENTE: ¿Podemos usar Service Worker con acciones?
+        const canUseServiceWorker = (
+            'serviceWorker' in navigator && 
+            navigator.serviceWorker.controller
+        );
+        
+        console.log('🔍 Estado Service Worker:', {
+            disponible: 'serviceWorker' in navigator,
+            controller: !!navigator.serviceWorker?.controller,
+            puedeUsarAcciones: canUseServiceWorker
+        });
+
+        // Si podemos usar Service Worker, usarlo (permite acciones)
+        if (canUseServiceWorker) {
+            console.log('✅ Usando Service Worker para notificación con acciones');
             navigator.serviceWorker.ready.then(registration => {
-                registration.showNotification(title, finalOptions);
+                registration.showNotification(title, notificationOptions);
             });
         } else {
-            // Fallback a Notification API sin acciones
-            new Notification(title, finalOptions);
+            // Si NO podemos usar Service Worker, usar Notification API básica
+            console.log('ℹ️ Usando Notification API básica (sin acciones)');
+            
+            // Crear copia de opciones sin acciones
+            const basicOptions = { ...notificationOptions };
+            delete basicOptions.actions; // Remover acciones que no son compatibles
+            
+            new Notification(title, basicOptions);
         }
-    } else {
-        // En navegador normal - sin acciones
-        new Notification(title, finalOptions);
     }
-}
 
     // Notificación diaria "No olvides agregar tus finanzas"
     scheduleDailyReminder() {
@@ -139,134 +140,135 @@ showNotification(title, options = {}) {
     }
 
     // CORREGIDO: Notificación diaria
-showDailyReminder() {
-    const canUseActions = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
-    
-    const reminderOptions = {
-        body: 'No olvides registrar tus transacciones del día',
-        icon: '/static/logo_pwa.png',
-        badge: '/static/logo_pwa.png'
-    };
-    
-    // Solo agregar acciones si están disponibles
-    if (canUseActions) {
-        reminderOptions.actions = [
-            {
-                action: 'add-transaction',
-                title: 'Agregar Transacción'
-            },
-            {
-                action: 'view-dashboard',
-                title: 'Ver Dashboard'
-            }
-        ];
-    }
-    
-    this.showNotification('💡 Recordatorio de Finanzas', reminderOptions);
+    showDailyReminder() {
+        const canUseActions = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+        
+        const reminderOptions = {
+            body: 'No olvides registrar tus transacciones del día',
+            icon: '/static/logo_pwa.png',
+            badge: '/static/logo_pwa.png'
+        };
+        
+        // Solo agregar acciones si están disponibles
+        if (canUseActions) {
+            reminderOptions.actions = [
+                {
+                    action: 'add-transaction',
+                    title: 'Agregar Transacción'
+                },
+                {
+                    action: 'view-dashboard',
+                    title: 'Ver Dashboard'
+                }
+            ];
+            console.log('✅ Recordatorio con acciones');
+        } else {
+            console.log('ℹ️ Recordatorio sin acciones');
+        }
+        
+        this.showNotification('💡 Recordatorio de Finanzas', reminderOptions);
 
-    // También mostrar toast en la app
-    if (typeof showToast === 'function') {
-        showToast('💡 No olvides registrar tus transacciones del día', 'info');
+        // También mostrar toast en la app
+        if (typeof showToast === 'function') {
+            showToast('💡 No olvides registrar tus transacciones del día', 'info');
+        }
     }
-}
 
-    // Verificar transacciones próximas a vencer
     // Verificar transacciones próximas a vencer - VERSIÓN MEJORADA
-async scheduleUpcomingTransactionsCheck() {
-    // CONFIGURACIÓN MEJORADA - Modo prueba/producción
-    const isTestMode = window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1' ||
-                      window.location.search.includes('test=true');
-    
-    // LIMPIAR INTERVALO ANTERIOR SI EXISTE
-    if (this.upcomingTransactionsCheck) {
-        clearInterval(this.upcomingTransactionsCheck);
-    }
-    
-    if (isTestMode) {
-        console.log("🧪 MODO PRUEBA: Verificación cada 2 minutos");
-        this.upcomingTransactionsCheck = setInterval(async () => {
-            // VERIFICAR SI HAY USUARIO ANTES DE EJECUTAR
-            if (auth.currentUser) {
-                await this.checkUpcomingTransactions();
-            }
-        }, 120000); // 2 minutos para pruebas
-    } else {
-        // CÓDIGO PRODUCCIÓN
-        console.log("🚀 MODO PRODUCCIÓN: Verificación cada hora");
-        this.upcomingTransactionsCheck = setInterval(async () => {
-            // VERIFICAR SI HAY USUARIO ANTES DE EJECUTAR
-            if (auth.currentUser) {
-                await this.checkUpcomingTransactions();
-            }
-        }, 60 * 60 * 1000); // Cada hora
-    }
+    async scheduleUpcomingTransactionsCheck() {
+        // CONFIGURACIÓN MEJORADA - Modo prueba/producción
+        const isTestMode = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.search.includes('test=true');
+        
+        // LIMPIAR INTERVALO ANTERIOR SI EXISTE
+        if (this.upcomingTransactionsCheck) {
+            clearInterval(this.upcomingTransactionsCheck);
+        }
+        
+        if (isTestMode) {
+            console.log("🧪 MODO PRUEBA: Verificación cada 2 minutos");
+            this.upcomingTransactionsCheck = setInterval(async () => {
+                // VERIFICAR SI HAY USUARIO ANTES DE EJECUTAR
+                if (auth.currentUser) {
+                    await this.checkUpcomingTransactions();
+                }
+            }, 120000); // 2 minutos para pruebas
+        } else {
+            // CÓDIGO PRODUCCIÓN
+            console.log("🚀 MODO PRODUCCIÓN: Verificación cada hora");
+            this.upcomingTransactionsCheck = setInterval(async () => {
+                // VERIFICAR SI HAY USUARIO ANTES DE EJECUTAR
+                if (auth.currentUser) {
+                    await this.checkUpcomingTransactions();
+                }
+            }, 60 * 60 * 1000); // Cada hora
+        }
 
-    // Verificar inmediatamente al cargar SOLO SI hay usuario
-    if (auth.currentUser) {
-        setTimeout(() => this.checkUpcomingTransactions(), 5000);
+        // Verificar inmediatamente al cargar SOLO SI hay usuario
+        if (auth.currentUser) {
+            setTimeout(() => this.checkUpcomingTransactions(), 5000);
+        }
     }
-}
-
     
     // CORREGIDO: Verificación segura de Firebase con reintentos inteligentes
-async checkUpcomingTransactions() {
-    // VERIFICACIÓN MÁS ROBUSTA DE DEPENDENCIAS
-    if (typeof firebase === 'undefined' || !firebase.app) {
-        console.log('⏳ Firebase no está inicializado, esperando...');
-        setTimeout(() => this.checkUpcomingTransactions(), 5000);
-        return;
-    }
-
-    if (!window.auth || !auth.currentUser) {
-        console.log('⏳ Usuario no autenticado, no se pueden verificar transacciones');
-        return; // No reintentar si no hay usuario
-    }
-
-    try {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // VERIFICACIÓN SEGURA DE FIRESTORE
-        if (!firebase.firestore) {
-            console.error('❌ Firestore no disponible');
+    async checkUpcomingTransactions() {
+        // VERIFICACIÓN MÁS ROBUSTA DE DEPENDENCIAS
+        if (typeof firebase === 'undefined' || !firebase.app) {
+            console.log('⏳ Firebase no está inicializado, esperando...');
+            setTimeout(() => this.checkUpcomingTransactions(), 5000);
             return;
         }
 
-        const db = firebase.firestore();
-        const transactionsRef = db.collection('users').doc(auth.currentUser.uid).collection('transactions');
-        
-        const todayStr = today.toISOString().split('T')[0];
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        
-        console.log('🔍 Buscando transacciones entre:', todayStr, 'y', tomorrowStr);
-
-        const snapshot = await transactionsRef
-            .where('date', '>=', todayStr)
-            .where('date', '<=', tomorrowStr)
-            .get();
-
-        const upcomingTransactions = [];
-        snapshot.forEach(doc => {
-            const transaction = doc.data();
-            transaction.id = doc.id;
-            if (this.isTransactionUpcoming(transaction)) {
-                upcomingTransactions.push(transaction);
-            }
-        });
-
-        console.log('📅 Transacciones próximas encontradas:', upcomingTransactions.length);
-
-        if (upcomingTransactions.length > 0) {
-            this.showUpcomingTransactionsAlert(upcomingTransactions);
+        if (!window.auth || !auth.currentUser) {
+            console.log('⏳ Usuario no autenticado, no se pueden verificar transacciones');
+            return; // No reintentar si no hay usuario
         }
 
-    } catch (error) {
-        console.error('Error verificando transacciones próximas:', error);
-        // No reintentar en caso de error para evitar loops infinitos
+        try {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            // VERIFICACIÓN SEGURA DE FIRESTORE
+            if (!firebase.firestore) {
+                console.error('❌ Firestore no disponible');
+                return;
+            }
+
+            const db = firebase.firestore();
+            const transactionsRef = db.collection('users').doc(auth.currentUser.uid).collection('transactions');
+            
+            const todayStr = today.toISOString().split('T')[0];
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            
+            console.log('🔍 Buscando transacciones entre:', todayStr, 'y', tomorrowStr);
+
+            const snapshot = await transactionsRef
+                .where('date', '>=', todayStr)
+                .where('date', '<=', tomorrowStr)
+                .get();
+
+            const upcomingTransactions = [];
+            snapshot.forEach(doc => {
+                const transaction = doc.data();
+                transaction.id = doc.id;
+                if (this.isTransactionUpcoming(transaction)) {
+                    upcomingTransactions.push(transaction);
+                }
+            });
+
+            console.log('📅 Transacciones próximas encontradas:', upcomingTransactions.length);
+
+            if (upcomingTransactions.length > 0) {
+                this.showUpcomingTransactionsAlert(upcomingTransactions);
+            }
+
+        } catch (error) {
+            console.error('Error verificando transacciones próximas:', error);
+            // No reintentar en caso de error para evitar loops infinitos
+        }
     }
-}
 
     isTransactionUpcoming(transaction) {
         const transactionDate = new Date(transaction.date);
@@ -322,15 +324,15 @@ async checkUpcomingTransactions() {
     }
 
     // Método para reiniciar notificaciones - VERSIÓN MEJORADA
-restart() {
-    console.log("🔄 Reiniciando NotificationManager...");
-    this.cleanup();
-    
-    // Pequeño delay para asegurar que auth esté listo
-    setTimeout(() => {
-        this.init();
-    }, 1000);
-}
+    restart() {
+        console.log("🔄 Reiniciando NotificationManager...");
+        this.cleanup();
+        
+        // Pequeño delay para asegurar que auth esté listo
+        setTimeout(() => {
+            this.init();
+        }, 1000);
+    }
 
     // Limpiar todos los timeouts e intervals
     cleanup() {
@@ -345,46 +347,43 @@ restart() {
         console.log('🧹 Notificaciones limpiadas');
     }
 
-    
-    // CORREGIDO: MÉTODO DE PRUEBA - Forzar notificación inmediata
-testNotification() {
-    console.log("🔔 Probando notificación...");
-    
-    // Determinar si podemos usar acciones
-    const canUseActions = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
-    
-    const testOptions = {
-        body: '¡Las notificaciones están funcionando correctamente!',
-        icon: '/static/logo_pwa.png',
-        badge: '/static/logo_pwa.png',
-        tag: 'test-notification',
-        requireInteraction: true
-    };
-    
-    // Solo agregar acciones si están disponibles
-    if (canUseActions) {
-        testOptions.actions = [
-            {
-                action: 'add-transaction',
-                title: 'Agregar Transacción'
-            },
-            {
-                action: 'view-dashboard',
-                title: 'Ver Dashboard'
-            }
-        ];
-        console.log("✅ Probando con acciones (Service Worker disponible)");
-    } else {
-        console.log("ℹ️ Probando sin acciones (Service Worker no disponible)");
+    // CORREGIDO: MÉTODO DE PRUEBA - Versión inteligente
+    testNotification() {
+        console.log("🔔 Probando notificación...");
+        
+        const canUseActions = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+        
+        const testOptions = {
+            body: '¡Las notificaciones están funcionando correctamente!',
+            icon: '/static/logo_pwa.png',
+            badge: '/static/logo_pwa.png',
+            tag: 'test-notification',
+            requireInteraction: true
+        };
+        
+        // Solo agregar acciones si están disponibles
+        if (canUseActions) {
+            testOptions.actions = [
+                {
+                    action: 'add-transaction',
+                    title: 'Agregar Transacción'
+                },
+                {
+                    action: 'view-dashboard',
+                    title: 'Ver Dashboard'
+                }
+            ];
+            console.log("✅ Probando con acciones (Service Worker disponible)");
+        } else {
+            console.log("ℹ️ Probando sin acciones (Service Worker no disponible)");
+        }
+        
+        this.showNotification('🧪 Prueba de Notificación', testOptions);
+        
+        if (typeof showToast === 'function') {
+            showToast('🔔 Notificación de prueba enviada', 'success');
+        }
     }
-    
-    // Probar notificación diaria
-    this.showNotification('🧪 Prueba de Notificación', testOptions);
-    
-    if (typeof showToast === 'function') {
-        showToast('🔔 Notificación de prueba enviada', 'success');
-    }
-}
 
     // Probar notificación de transacciones próximas
     testUpcomingTransactions() {
@@ -426,6 +425,7 @@ testNotification() {
             },
             browserSupport: 'Notification' in window,
             serviceWorker: 'serviceWorker' in navigator,
+            serviceWorkerController: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
             firestore: !!(typeof firebase !== 'undefined' && firebase.firestore),
             auth: !!(window.auth && auth.currentUser),
             initialized: this.isInitialized
@@ -463,10 +463,6 @@ testNotification() {
 
 // Variable global para el manager de notificaciones
 let notificationManager = null;
-
-
-
-
 
 
 
