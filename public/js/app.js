@@ -2850,107 +2850,55 @@ function showProfile() {
 }
 
 // FUNCIÓN AUXILIAR: Cargar página de perfil
-function loadProfilePage(user) {
-    const content = document.getElementById('content');
-    
-    content.innerHTML = `
-        <div class="container mt-4">
-            <div class="row">
-                <!-- Columna del perfil -->
-                <div class="col-md-4">
-                    <div class="card shadow">
-                        <div class="card-body text-center">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h2 class="mb-0">
-                                    <i class="fas fa-user-circle text-primary me-2"></i>
-                                    Mi Perfil
-                                </h2>
-                                <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
-                                    <i class="fas fa-arrow-left me-1"></i> Volver
-                                </button>
-                            </div>
-                            
-                            <i class="fas fa-user-circle fa-5x mb-3 text-primary"></i>
-                            <h2>${user.displayName || user.email}</h2>
-                            <p class="text-muted">
-                                Miembro desde: ${new Date(user.metadata.creationTime).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
-                            </p>
-                            <hr>
-                            
-                            <!-- Información de la cuenta -->
-                            <div class="mt-3">
-                                <ul class="list-group">
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Email verificado
-                                        <span class="badge ${user.emailVerified ? 'bg-success' : 'bg-warning'}">
-                                            ${user.emailVerified ? 'Sí' : 'No'}
-                                        </span>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Proveedor
-                                        <span class="badge bg-info">${user.providerData[0]?.providerId || 'Email'}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <hr>
-                            
-                            <!-- Estadísticas -->
-                            <div class="row text-center">
-                                <div class="col-6">
-                                    <h5>Total Ahorrado</h5>
-                                    <p class="text-success h4">$<span id="totalSavings">0.00</span></p>
-                                </div>
-                                <div class="col-6">
-                                    <h5>Transacciones</h5>
-                                    <p class="text-primary h4"><span id="totalTransactions">0</span></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+// Función para cargar estadísticas del perfil - VERSIÓN CORREGIDA
+async function loadProfileStats() {
+    try {
+        // CORRECCIÓN: Usar firebase.auth() directamente
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            console.log('⚠️ No hay usuario para cargar estadísticas');
+            return;
+        }
 
-                <!-- Columna de la rueda de la vida -->
-                <div class="col-md-8">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <h3 class="card-title text-center mb-4">
-                                <i class="fas fa-chart-pie text-primary me-2"></i>
-                                Mi Rueda de la Vida
-                            </h3>
-                            
-                            <div class="text-center mb-4">
-                                <canvas id="lifeWheel" width="400" height="400"></canvas>
-                            </div>
-                            
-                            <div class="mt-4">
-                                <h4 class="text-center mb-4">Ajusta tus valores:</h4>
-                                <div class="row" id="sliderContainer">
-                                    <!-- Los sliders se generarán dinámicamente -->
-                                </div>
-                                
-                                <!-- Botones de guardar/cargar -->
-                                <div class="text-center mt-4">
-                                    <button class="btn btn-primary me-2" onclick="saveWheelProgress()">
-                                        <i class="fas fa-save me-1"></i> Guardar Progreso
-                                    </button>
-                                    <button class="btn btn-secondary" onclick="loadWheelProgress()">
-                                        <i class="fas fa-undo me-1"></i> Cargar Último Guardado
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+        console.log('📊 Cargando estadísticas para:', user.email);
 
-    // Inicializar la rueda de la vida
-    initializeLifeWheel();
-    
-    // Cargar estadísticas del perfil
-    loadProfileStats();
+        // Obtener todas las transacciones (no solo del mes actual)
+        const transactions = await transactionManager.getTransactions({});
+        
+        // Obtener todos los presupuestos
+        const allBudgets = await budgetManager.getAllUserBudgets();
+        
+        // Calcular total ahorrado (ingresos - gastos)
+        const totalIncome = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const totalExpense = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+        const totalSavings = totalIncome - totalExpense;
+
+        // Actualizar contadores
+        const totalSavingsElement = document.getElementById('totalSavings');
+        const totalTransactionsElement = document.getElementById('totalTransactions');
+        
+        if (totalSavingsElement) {
+            totalSavingsElement.textContent = totalSavings.toFixed(2);
+        }
+        
+        if (totalTransactionsElement) {
+            totalTransactionsElement.textContent = transactions.length;
+        }
+        
+        console.log('✅ Estadísticas cargadas:', {
+            ahorros: totalSavings,
+            transacciones: transactions.length
+        });
+        
+    } catch (error) {
+        console.error('Error loading profile stats:', error);
+    }
 }
 
 // FUNCIÓN FALTANTE: Inicializar rueda de la vida
@@ -3082,23 +3030,26 @@ function updateWheelChart(index, value) {
 }
 
 function saveWheelProgress() {
-    if (window.lifeWheelChart && window.auth && window.auth.currentUser) {
+    if (window.lifeWheelChart) {
         const values = window.lifeWheelChart.data.datasets[0].data;
-        const user = window.auth.currentUser;
-        
-        try {
-            localStorage.setItem(`wheelValues_${user.uid}`, JSON.stringify(values));
-            showToast('Progreso guardado correctamente', 'success');
-        } catch (error) {
-            console.error('❌ Error guardando progreso:', error);
-            showToast('Error al guardar el progreso', 'danger');
+        // CORRECCIÓN: Usar firebase.auth() directamente
+        const user = firebase.auth().currentUser;
+        if (user) {
+            try {
+                localStorage.setItem(`wheelValues_${user.uid}`, JSON.stringify(values));
+                showToast('Progreso guardado correctamente', 'success');
+            } catch (error) {
+                console.error('❌ Error guardando progreso:', error);
+                showToast('Error al guardar el progreso', 'danger');
+            }
         }
     }
 }
 
 function loadWheelProgress() {
-    if (window.auth && window.auth.currentUser && window.lifeWheelChart) {
-        const user = window.auth.currentUser;
+    // CORRECCIÓN: Usar firebase.auth() directamente
+    const user = firebase.auth().currentUser;
+    if (user && window.lifeWheelChart) {
         try {
             const savedValues = localStorage.getItem(`wheelValues_${user.uid}`);
             if (savedValues) {
@@ -3126,45 +3077,110 @@ function loadWheelProgress() {
     }
 }
 
-// Función para cargar estadísticas del perfil - ACTUALIZADA
-async function loadProfileStats() {
-    try {
-        const user = window.auth.currentUser;
-        if (!user) return;
+// FUNCIÓN AUXILIAR: Cargar página de perfil
+function loadProfilePage(user) {
+    const content = document.getElementById('content');
+    
+    content.innerHTML = `
+        <div class="container mt-4">
+            <div class="row">
+                <!-- Columna del perfil -->
+                <div class="col-md-4">
+                    <div class="card shadow">
+                        <div class="card-body text-center">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="mb-0">
+                                    <i class="fas fa-user-circle text-primary me-2"></i>
+                                    Mi Perfil
+                                </h2>
+                                <button class="btn btn-secondary" onclick="loadDashboard(firebase.auth().currentUser)">
+                                    <i class="fas fa-arrow-left me-1"></i> Volver
+                                </button>
+                            </div>
+                            
+                            <i class="fas fa-user-circle fa-5x mb-3 text-primary"></i>
+                            <h2>${user.displayName || user.email}</h2>
+                            <p class="text-muted">
+                                Miembro desde: ${new Date(user.metadata.creationTime).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+                            </p>
+                            <hr>
+                            
+                            <!-- Información de la cuenta -->
+                            <div class="mt-3">
+                                <ul class="list-group">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Email verificado
+                                        <span class="badge ${user.emailVerified ? 'bg-success' : 'bg-warning'}">
+                                            ${user.emailVerified ? 'Sí' : 'No'}
+                                        </span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Proveedor
+                                        <span class="badge bg-info">${user.providerData[0]?.providerId || 'Email'}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <hr>
+                            
+                            <!-- Estadísticas -->
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h5>Total Ahorrado</h5>
+                                    <p class="text-success h4">$<span id="totalSavings">0.00</span></p>
+                                </div>
+                                <div class="col-6">
+                                    <h5>Transacciones</h5>
+                                    <p class="text-primary h4"><span id="totalTransactions">0</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        // Obtener todas las transacciones (no solo del mes actual)
-        const transactions = await transactionManager.getTransactions({});
-        
-        // Obtener todos los presupuestos
-        const allBudgets = await budgetManager.getAllUserBudgets();
-        
-        // Calcular total ahorrado (ingresos - gastos)
-        const totalIncome = transactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-            
-        const totalExpense = transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-            
-        const totalSavings = totalIncome - totalExpense;
+                <!-- Columna de la rueda de la vida -->
+                <div class="col-md-8">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h3 class="card-title text-center mb-4">
+                                <i class="fas fa-chart-pie text-primary me-2"></i>
+                                Mi Rueda de la Vida
+                            </h3>
+                            
+                            <div class="text-center mb-4">
+                                <canvas id="lifeWheel" width="400" height="400"></canvas>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <h4 class="text-center mb-4">Ajusta tus valores:</h4>
+                                <div class="row" id="sliderContainer">
+                                    <!-- Los sliders se generarán dinámicamente -->
+                                </div>
+                                
+                                <!-- Botones de guardar/cargar -->
+                                <div class="text-center mt-4">
+                                    <button class="btn btn-primary me-2" onclick="saveWheelProgress()">
+                                        <i class="fas fa-save me-1"></i> Guardar Progreso
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="loadWheelProgress()">
+                                        <i class="fas fa-undo me-1"></i> Cargar Último Guardado
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 
-        // Actualizar contadores
-        const totalSavingsElement = document.getElementById('totalSavings');
-        const totalTransactionsElement = document.getElementById('totalTransactions');
-        
-        if (totalSavingsElement) {
-            totalSavingsElement.textContent = totalSavings.toFixed(2);
-        }
-        
-        if (totalTransactionsElement) {
-            totalTransactionsElement.textContent = transactions.length;
-        }
-        
-    } catch (error) {
-        console.error('Error loading profile stats:', error);
-    }
+    // Inicializar la rueda de la vida
+    initializeLifeWheel();
+    
+    // Cargar estadísticas del perfil
+    loadProfileStats();
 }
+
 
 // Agregar estilos CSS para la rueda de la vida
 function addLifeWheelStyles() {
