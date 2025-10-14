@@ -912,18 +912,13 @@ function createFallbackBudgetManager() {
     };
 }
 
-// CONFIGURAR AUTH LISTENER
+
+// En setupAuthListener() - VERSIÓN CORREGIDA
 function setupAuthListener() {
-    // VERIFICACIÓN MÁS ROBUSTA
-    if (typeof auth === 'undefined' && typeof window.auth === 'undefined') {
-        console.error('❌ auth no está definido');
-        setTimeout(setupAuthListener, 1000);
-        return;
-    }
+    console.log('🔐 Configurando listener de autenticación...');
     
-    const authInstance = window.auth || auth;
-    
-    authInstance.onAuthStateChanged((user) => {
+    // USAR SIEMPRE firebase.auth() directamente
+    firebase.auth().onAuthStateChanged((user) => {
         console.log("Estado de autenticación:", user ? "Usuario logueado" : "No logueado");
         
         updateNavbar(user);
@@ -932,7 +927,7 @@ function setupAuthListener() {
             console.log("👤 Usuario autenticado:", user.email);
             loadDashboard(user);
             
-            // Reiniciar notificaciones de forma segura
+            // Reiniciar notificaciones
             if (window.notificationManager && typeof window.notificationManager.restart === 'function') {
                 setTimeout(() => {
                     try {
@@ -2829,19 +2824,20 @@ function showAddBudget() {
     });
 }
 
-// FUNCIÓN FALTANTE: Mostrar perfil del usuario
 function showProfile() {
     try {
         console.log('👤 Mostrando perfil...');
         
-        // Verificar que el usuario esté autenticado
-        if (!window.auth || !window.auth.currentUser) {
+        // CORRECCIÓN: Usar firebase.auth() directamente
+        const user = firebase.auth().currentUser;
+        
+        if (!user) {
             console.error('❌ Usuario no autenticado');
             showToast('Debes iniciar sesión para ver tu perfil', 'warning');
+            loadLoginPage();
             return;
         }
 
-        const user = window.auth.currentUser;
         console.log('✅ Usuario para perfil:', user.email);
         
         // Cargar la página de perfil
