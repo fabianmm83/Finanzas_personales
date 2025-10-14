@@ -1011,80 +1011,71 @@ function setupNavigation() {
     const navLogout = document.getElementById('nav-logout');
     const navLogin = document.getElementById('nav-login');
 
-    // Verificar que los elementos existen
-    console.log('Elementos de navegación:', {
-        navHome: !!navHome,
-        navProfile: !!navProfile,
-        navAddTransaction: !!navAddTransaction,
-        navLogout: !!navLogout,
-        navLogin: !!navLogin
-    });
+    // Función común para manejar navegación
+    function handleNavigation(callback) {
+        return (e) => {
+            e.preventDefault();
+            // Cerrar menú en móviles
+            closeNavbar();
+            // Ejecutar la acción
+            callback();
+        };
+    }
 
     if (navHome) {
-    navHome.addEventListener('click', (e) => {
-        e.preventDefault();
-        console.log('🏠 Navegando a Home - CLICK CONFIRMADO');
-        
-        // CORRECCIÓN: Usar firebase.auth() directamente
-        const currentUser = firebase.auth().currentUser;
-        if (currentUser) {
-            console.log('✅ Usuario autenticado, cargando dashboard...');
-            loadDashboard(currentUser);
-        } else {
-            console.log('⚠️ Usuario no autenticado, cargando login...');
-            loadLoginPage();
-        }
-    });
-}
+        navHome.addEventListener('click', handleNavigation(() => {
+            console.log('🏠 Navegando a Home - CLICK CONFIRMADO');
+            const currentUser = firebase.auth().currentUser;
+            if (currentUser) {
+                console.log('✅ Usuario autenticado, cargando dashboard...');
+                loadDashboard(currentUser);
+            } else {
+                console.log('⚠️ Usuario no autenticado, cargando login...');
+                loadLoginPage();
+            }
+        }));
+    }
 
     if (navProfile) {
-    navProfile.addEventListener('click', (e) => {
-        e.preventDefault();
-        console.log('👤 Navegando a Perfil - CLICK CONFIRMADO');
-        
-        // CORRECCIÓN: Usar firebase.auth() directamente para consistencia
-        const currentUser = firebase.auth().currentUser;
-        if (currentUser) {
-            console.log('✅ Usuario autenticado, cargando perfil...');
-            showProfile();
-        } else {
-            console.log('⚠️ Usuario no autenticado, cargando login...');
-            loadLoginPage();
-        }
-    });
-}
+        navProfile.addEventListener('click', handleNavigation(() => {
+            console.log('👤 Navegando a Perfil - CLICK CONFIRMADO');
+            const currentUser = firebase.auth().currentUser;
+            if (currentUser) {
+                console.log('✅ Usuario autenticado, cargando perfil...');
+                showProfile();
+            } else {
+                console.log('⚠️ Usuario no autenticado, cargando login...');
+                loadLoginPage();
+            }
+        }));
+    }
 
-if (navAddTransaction) {
-    navAddTransaction.addEventListener('click', (e) => {
-        e.preventDefault();
-        console.log('➕ Navegando a Agregar Transacción - CLICK CONFIRMADO');
-        
-        // CORRECCIÓN: Usar firebase.auth() directamente para consistencia
-        const currentUser = firebase.auth().currentUser;
-        if (currentUser) {
-            console.log('✅ Usuario autenticado, cargando formulario...');
-            showAddTransaction();
-        } else {
-            console.log('⚠️ Usuario no autenticado, cargando login...');
-            loadLoginPage();
-        }
-    });
-}
+    if (navAddTransaction) {
+        navAddTransaction.addEventListener('click', handleNavigation(() => {
+            console.log('➕ Navegando a Agregar Transacción - CLICK CONFIRMADO');
+            const currentUser = firebase.auth().currentUser;
+            if (currentUser) {
+                console.log('✅ Usuario autenticado, cargando formulario...');
+                showAddTransaction();
+            } else {
+                console.log('⚠️ Usuario no autenticado, cargando login...');
+                loadLoginPage();
+            }
+        }));
+    }
 
-if (navLogout) {
-    navLogout.addEventListener('click', (e) => {
-        e.preventDefault();
-        console.log('🚪 Cerrando sesión - CLICK CONFIRMADO');
-        logout();
-    });
-}
+    if (navLogout) {
+        navLogout.addEventListener('click', handleNavigation(() => {
+            console.log('🚪 Cerrando sesión - CLICK CONFIRMADO');
+            logout();
+        }));
+    }
 
     if (navLogin) {
-        navLogin.addEventListener('click', (e) => {
-            e.preventDefault();
+        navLogin.addEventListener('click', handleNavigation(() => {
             console.log('🔑 Navegando a Login - CLICK CONFIRMADO');
             loadLoginPage();
-        });
+        }));
     }
 
     console.log('✅ Navegación configurada correctamente');
@@ -1094,7 +1085,6 @@ if (navLogout) {
 function updateNavbar(user) {
     console.log('🔄 Actualizando navbar...');
     
-    // Obtener todos los elementos de navegación
     const navHome = document.getElementById('nav-home');
     const navProfile = document.getElementById('nav-profile');
     const navAddTransaction = document.getElementById('nav-add-transaction');
@@ -1102,24 +1092,31 @@ function updateNavbar(user) {
     const navLogin = document.getElementById('nav-login');
 
     if (user) {
-        // Usuario logueado - mostrar elementos de usuario
+        // Usuario logueado
         console.log('✅ Mostrando navbar para usuario logueado');
         
         if (navHome) navHome.parentElement.style.display = 'block';
         if (navProfile) navProfile.parentElement.style.display = 'block';
         if (navAddTransaction) navAddTransaction.parentElement.style.display = 'block';
-        if (navLogout) navLogout.parentElement.style.display = 'block';
+        if (navLogout) {
+            navLogout.parentElement.style.display = 'block';
+            // Asegurar que el texto sea visible
+            navLogout.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>';
+        }
         if (navLogin) navLogin.parentElement.style.display = 'none';
         
     } else {
-        // Usuario no logueado - mostrar solo login
+        // Usuario no logueado
         console.log('✅ Mostrando navbar para usuario no logueado');
         
         if (navHome) navHome.parentElement.style.display = 'none';
         if (navProfile) navProfile.parentElement.style.display = 'none';
         if (navAddTransaction) navAddTransaction.parentElement.style.display = 'none';
         if (navLogout) navLogout.parentElement.style.display = 'none';
-        if (navLogin) navLogin.parentElement.style.display = 'block';
+        if (navLogin) {
+            navLogin.parentElement.style.display = 'block';
+            navLogin.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Iniciar Sesión</span>';
+        }
     }
 }
 
@@ -3645,22 +3642,62 @@ async function loginWithGoogle() {
     }
 }
 
-async function logout() {
-    try {
-        // CORRECCIÓN: Usar firebase.auth() directamente
-        await firebase.auth().signOut();
-        console.log('✅ Usuario cerró sesión');
-        showToast('Sesión cerrada', 'info');
-        
-        // Limpiar cualquier referencia a window.auth
-        if (window.auth) {
-            delete window.auth;
-        }
-    } catch (error) {
-        console.error('❌ Error al cerrar sesión:', error);
-        showToast('Error al cerrar sesión', 'danger');
+function closeNavbar() {
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    const navbarCollapse = document.getElementById('navbarNav');
+    
+    if (navbarToggler && navbarCollapse && navbarCollapse.classList.contains('show')) {
+        // Cerrar el menú colapsable
+        const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
+            toggle: false
+        });
+        bsCollapse.hide();
+        console.log('📱 Menú de navegación cerrado');
     }
 }
+
+async function logout() {
+    try {
+        console.log('🚪 Cerrando sesión...');
+        
+        // Cerrar sesión en Firebase
+        await firebase.auth().signOut();
+        console.log('✅ Sesión cerrada en Firebase');
+        
+        // Limpiar datos locales
+        localStorage.clear();
+        console.log('✅ localStorage limpiado');
+        
+        // Mostrar mensaje
+        showToast('Sesión cerrada correctamente', 'info');
+        
+        // Recargar la página para limpiar completamente el estado
+        setTimeout(() => {
+            console.log('🔄 Recargando página...');
+            location.reload();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('❌ Error al cerrar sesión:', error);
+        showToast('Error al cerrar sesión: ' + error.message, 'danger');
+    }
+}
+
+
+
+// ==================== EVENT LISTENERS GLOBALES ====================
+
+// Cerrar menú al hacer click fuera de él
+document.addEventListener('click', function(e) {
+    const navbar = document.getElementById('navbarNav');
+    const toggler = document.querySelector('.navbar-toggler');
+    
+    if (navbar && navbar.classList.contains('show') && 
+        !navbar.contains(e.target) && 
+        !toggler.contains(e.target)) {
+        closeNavbar();
+    }
+});
 
 // MANEJO DE ERRORES GLOBAL
 window.addEventListener('error', function(event) {
