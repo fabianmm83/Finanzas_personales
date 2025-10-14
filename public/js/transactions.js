@@ -1,4 +1,4 @@
-// transactions.js - Versión corregida con verificaciones de seguridad
+// transactions.js - VERSIÓN CORREGIDA
 if (typeof TransactionManager === 'undefined') {
     class TransactionManager {
         constructor() {
@@ -15,8 +15,11 @@ if (typeof TransactionManager === 'undefined') {
             } catch (error) {
                 console.log("⚠️ Error inicializando Functions:", error);
             }
+            
+            console.log("🚀 TransactionManager instanciado");
         }
 
+        // ... (todos tus métodos existentes se mantienen igual)
         async addTransaction(transactionData) {
             try {
                 console.log("📝 Agregando transacción:", transactionData);
@@ -44,69 +47,95 @@ if (typeof TransactionManager === 'undefined') {
             }
         }
 
-        // Método directo a Firestore
-      // transactions.js - EN LA FUNCIÓN getTransactionsDirect, asegúrate de que sea así:
-async getTransactionsDirect(filters = {}) {
-    try {
-        const user = firebase.auth().currentUser;
-        if (!user) {
-            console.log("Usuario no autenticado");
-            return [];
+        async addTransactionDirect(transactionData) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) throw new Error('Usuario no autenticado');
+
+                const transaction = {
+                    userId: user.uid,
+                    type: transactionData.type,
+                    category: transactionData.category,
+                    amount: parseFloat(transactionData.amount),
+                    date: firebase.firestore.Timestamp.fromDate(new Date(transactionData.date)),
+                    description: transactionData.description || '',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                const docRef = await this.db.collection('transactions').add(transaction);
+                console.log("✅ Transacción agregada directamente con ID:", docRef.id);
+                
+                showToast('Transacción agregada correctamente', 'success');
+                return { id: docRef.id, ...transaction };
+                
+            } catch (error) {
+                console.error('❌ Error en método directo:', error);
+                throw error;
+            }
         }
 
-        let query = this.db.collection('transactions')
-            .where('userId', '==', user.uid);
+        async getTransactionsDirect(filters = {}) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    console.log("Usuario no autenticado");
+                    return [];
+                }
 
-        // Aplicar filtros
-        if (filters.month && filters.year) {
-            const startDate = new Date(filters.year, filters.month - 1, 1);
-            const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
-            
-            query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
-                        .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+                let query = this.db.collection('transactions')
+                    .where('userId', '==', user.uid);
+
+                // Aplicar filtros
+                if (filters.month && filters.year) {
+                    const startDate = new Date(filters.year, filters.month - 1, 1);
+                    const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59);
+                    
+                    query = query.where('date', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+                                .where('date', '<=', firebase.firestore.Timestamp.fromDate(endDate));
+                }
+
+                if (filters.type) {
+                    query = query.where('type', '==', filters.type);
+                }
+
+                if (filters.category) {
+                    query = query.where('category', '==', filters.category);
+                }
+
+                const snapshot = await query.orderBy('date', 'desc').get();
+                const transactions = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    // CORRECCIÓN: Usar this.processTransactionDate correctamente
+                    const processedDate = this.processTransactionDate(data);
+                    
+                    return {
+                        id: doc.id,
+                        ...data,
+                        date: processedDate // Usar la fecha procesada correctamente
+                    };
+                });
+                
+                console.log(`✅ Se encontraron ${transactions.length} transacciones directamente`);
+                
+                // Debug: mostrar las primeras 3 transacciones con sus fechas
+                transactions.slice(0, 3).forEach((t, i) => {
+                    console.log(`📅 Transacción ${i}:`, {
+                        id: t.id,
+                        fechaOriginal: t.date,
+                        fechaFormateada: t.date.toLocaleDateString('es-ES'),
+                        tipo: t.type,
+                        monto: t.amount
+                    });
+                });
+                
+                return transactions;
+
+            } catch (error) {
+                console.error('❌ Error en método directo:', error);
+                throw error;
+            }
         }
-
-        if (filters.type) {
-            query = query.where('type', '==', filters.type);
-        }
-
-        if (filters.category) {
-            query = query.where('category', '==', filters.category);
-        }
-
-        const snapshot = await query.orderBy('date', 'desc').get();
-        const transactions = snapshot.docs.map(doc => {
-            const data = doc.data();
-            // CORRECCIÓN: Usar this.processTransactionDate correctamente
-            const processedDate = this.processTransactionDate(data);
-            
-            return {
-                id: doc.id,
-                ...data,
-                date: processedDate // Usar la fecha procesada correctamente
-            };
-        });
-        
-        console.log(`✅ Se encontraron ${transactions.length} transacciones directamente`);
-        
-        // Debug: mostrar las primeras 3 transacciones con sus fechas
-        transactions.slice(0, 3).forEach((t, i) => {
-            console.log(`📅 Transacción ${i}:`, {
-                id: t.id,
-                fechaOriginal: t.date,
-                fechaFormateada: t.date.toLocaleDateString('es-ES'),
-                tipo: t.type,
-                monto: t.amount
-            });
-        });
-        
-        return transactions;
-
-    } catch (error) {
-        console.error('❌ Error en método directo:', error);
-        throw error;
-    }
-}
 
         async getTransactions(filters = {}) {
             try {
@@ -134,71 +163,62 @@ async getTransactionsDirect(filters = {}) {
             }
         }
 
-// transactions.js - ACTUALIZA processTransactionDate para mejor manejo
-processTransactionDate(transaction) {
-    try {
-        console.log('🔍 TRANSACCIÓN COMPLETA en processTransactionDate:', transaction);
-        console.log('📅 transaction.date:', transaction.date);
-        console.log('📅 Tipo de transaction.date:', typeof transaction.date);
-        
-        const dateData = transaction.date;
-        
-        // PRIMERO: Si es un string ISO (serializado desde Cloud Functions)
-        if (dateData && typeof dateData === 'string') {
-            console.log('✅ Es un string ISO serializado');
-            const date = new Date(dateData);
-            if (date instanceof Date && !isNaN(date.getTime())) {
-                console.log('✅ String ISO convertido correctamente a Date');
-                return date;
-            }
-        }
-        
-        // Si ya es un objeto Date válido
-        if (dateData instanceof Date && !isNaN(dateData.getTime())) {
-            console.log('✅ Ya es un Date válido');
-            return dateData;
-        }
-        
-        // Si es un objeto con propiedades de fecha (Timestamp de Firestore)
-        if (dateData && typeof dateData === 'object') {
-            console.log('✅ Es un objeto, verificando propiedades...');
-            console.log('📊 Propiedades del objeto date:', Object.keys(dateData));
-            
-            // Si tiene el método toDate (Timestamp de Firestore)
-            if (typeof dateData.toDate === 'function') {
-                console.log('✅ Tiene método toDate()');
-                const date = dateData.toDate();
-                if (date instanceof Date && !isNaN(date.getTime())) {
-                    return date;
+        processTransactionDate(transaction) {
+            try {
+                console.log('🔍 TRANSACCIÓN COMPLETA en processTransactionDate:', transaction);
+                console.log('📅 transaction.date:', transaction.date);
+                console.log('📅 Tipo de transaction.date:', typeof transaction.date);
+                
+                const dateData = transaction.date;
+                
+                // PRIMERO: Si es un string ISO (serializado desde Cloud Functions)
+                if (dateData && typeof dateData === 'string') {
+                    console.log('✅ Es un string ISO serializado');
+                    const date = new Date(dateData);
+                    if (date instanceof Date && !isNaN(date.getTime())) {
+                        console.log('✅ String ISO convertido correctamente a Date');
+                        return date;
+                    }
                 }
-            }
-            
-            // Si tiene _seconds (Timestamp serializado)
-            if (dateData._seconds) {
-                console.log('✅ Tiene _seconds');
-                const date = new Date(dateData._seconds * 1000);
-                if (date instanceof Date && !isNaN(date.getTime())) {
-                    return date;
+                
+                // Si ya es un objeto Date válido
+                if (dateData instanceof Date && !isNaN(dateData.getTime())) {
+                    console.log('✅ Ya es un Date válido');
+                    return dateData;
                 }
+                
+                // Si es un objeto con propiedades de fecha (Timestamp de Firestore)
+                if (dateData && typeof dateData === 'object') {
+                    console.log('✅ Es un objeto, verificando propiedades...');
+                    console.log('📊 Propiedades del objeto date:', Object.keys(dateData));
+                    
+                    // Si tiene el método toDate (Timestamp de Firestore)
+                    if (typeof dateData.toDate === 'function') {
+                        console.log('✅ Tiene método toDate()');
+                        const date = dateData.toDate();
+                        if (date instanceof Date && !isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                    
+                    // Si tiene _seconds (Timestamp serializado)
+                    if (dateData._seconds) {
+                        console.log('✅ Tiene _seconds');
+                        const date = new Date(dateData._seconds * 1000);
+                        if (date instanceof Date && !isNaN(date.getTime())) {
+                            return date;
+                        }
+                    }
+                }
+                
+                console.error('❌ No se pudo procesar la fecha, usando fecha actual');
+                return new Date();
+                
+            } catch (error) {
+                console.error('❌ Error procesando fecha:', error);
+                return new Date();
             }
         }
-        
-        console.error('❌ No se pudo procesar la fecha, usando fecha actual');
-        return new Date();
-        
-    } catch (error) {
-        console.error('❌ Error procesando fecha:', error);
-        return new Date();
-    }
-}
-
-
-
-
-
-
-
-      
 
         async updateTransaction(transactionId, transactionData) {
             try {
@@ -379,8 +399,18 @@ processTransactionDate(transaction) {
         }
     }
 
-    window.transactionManager = new TransactionManager();
-    console.log("🚀 TransactionManager inicializado correctamente");
+    // 🔥 CORRECCIÓN CRÍTICA: Exportar la clase globalmente
+    window.TransactionManager = TransactionManager;
+    console.log("✅ TransactionManager definido globalmente");
+
 } else {
     console.log("ℹ️ TransactionManager ya estaba definido");
+}
+
+// 🔥 CORRECCIÓN CRÍTICA: Instanciar siempre, independientemente del condicional
+if (typeof transactionManager === 'undefined') {
+    window.transactionManager = new TransactionManager();
+    console.log("🚀 TransactionManager instanciado correctamente");
+} else {
+    console.log("ℹ️ transactionManager ya estaba instanciado");
 }

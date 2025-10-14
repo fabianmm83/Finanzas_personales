@@ -586,63 +586,329 @@ function waitForFirebase() {
     });
 }
 
-// INICIALIZAR MANAGERS
+// AGREGAR AL INICIO DE app.js - DESPUÉS DE LAS VARIABLES GLOBALES
+function initializeTransactionManager() {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const checkTransactionManager = () => {
+            attempts++;
+            
+            // Verificar si TransactionManager está disponible
+            if (typeof TransactionManager !== 'undefined') {
+                console.log("✅ TransactionManager disponible, instanciando...");
+                
+                // Instanciar TransactionManager
+                if (typeof transactionManager === 'undefined') {
+                    window.transactionManager = new TransactionManager();
+                    console.log("✅ TransactionManager instanciado correctamente");
+                }
+                
+                resolve();
+                return;
+            }
+            
+            if (attempts >= maxAttempts) {
+                const error = new Error("TransactionManager no disponible después de " + maxAttempts + " intentos");
+                console.error("❌", error.message);
+                reject(error);
+                return;
+            }
+            
+            console.log("⏳ Esperando TransactionManager... intento " + attempts);
+            setTimeout(checkTransactionManager, 1000);
+        };
+        
+        checkTransactionManager();
+    });
+}
+
+// MODIFICAR initializeManagers() para ser más simple
 async function initializeManagers() {
     try {
-        // ESPERAR a que TransactionManager esté disponible
-        if (typeof TransactionManager === 'undefined') {
-            console.warn("⚠️ TransactionManager no disponible - reintentando...");
-            setTimeout(initializeManagers, 1000);
-            return;
-        }
+        console.log("🔄 Inicializando managers...");
         
-        // Inicializar TransactionManager primero (es crítico)
-        if (typeof transactionManager === 'undefined') {
-            console.log("Inicializando TransactionManager...");
-            window.transactionManager = new TransactionManager();
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
+        // 1. Inicializar TransactionManager primero
+        await initializeTransactionManager();
         
-        // Luego BudgetManager si existe
+        // 2. Luego BudgetManager si existe
         if (typeof BudgetManager !== 'undefined' && typeof budgetManager === 'undefined') {
             console.log("Inicializando BudgetManager...");
             window.budgetManager = new BudgetManager();
         }
         
-        // Finalmente NotificationManager
+        // 3. Finalmente NotificationManager
         if (!notificationManager && typeof NotificationManager !== 'undefined') {
             console.log("Inicializando NotificationManager...");
             window.notificationManager = new NotificationManager();
         }
         
+        console.log("✅ Todos los managers inicializados correctamente");
+        
     } catch (error) {
         console.error("❌ Error inicializando managers:", error);
+        // Usar fallbacks
+        window.transactionManager = createFallbackTransactionManager();
+        if (typeof budgetManager === 'undefined') {
+            window.budgetManager = createFallbackBudgetManager();
+        }
     }
 }
 
-// FUNCIÓN DE FALLBACK PARA NOTIFICACIONES
-function createFallbackNotificationManager() {
+
+
+
+
+
+
+
+// MODIFICAR initializeApp() para usar la nueva función
+async function initializeApp() {
+    showLoading(true);
+    
+    try {
+        // VERIFICACIÓN MÁS ROBUSTA DE FIREBASE
+        if (typeof firebase === 'undefined') {
+            console.error('❌ Firebase no está cargado');
+            showError('Error: Firebase no se cargó correctamente. Recarga la página.');
+            return;
+        }
+        
+        await waitForFirebase();
+        
+        // VERIFICAR SI FIREBASE SE INICIALIZÓ CORRECTAMENTE
+        if (!firebase.apps.length) {
+            console.error('❌ Firebase no se inicializó');
+            showError('Error de configuración de Firebase');
+            return;
+        }
+        
+        console.log("✅ Firebase inicializado correctamente");
+        
+        // INICIALIZAR MANAGERS
+        await initializeManagers();
+        
+        // CONFIGURAR AUTH LISTENER
+        setupAuthListener();
+        
+        // CONFIGURAR NAVEGACIÓN
+        setupNavigation();
+        
+        console.log("✅ Aplicación inicializada correctamente");
+        
+    } catch (error) {
+        console.error("Error crítico en inicialización:", error);
+        showError("Error al inicializar la aplicación: " + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
+
+
+// AGREGAR FUNCIÓN DE FALLBACK MEJORADA
+function createFallbackTransactionManager() {
+    console.warn('⚠️ Usando TransactionManager de fallback');
     return {
-        init: () => console.log("ℹ️ Notificaciones deshabilitadas"),
-        cleanup: () => console.log("ℹ️ Limpieza de notificaciones deshabilitada"),
-        restart: () => console.log("ℹ️ Reinicio de notificaciones deshabilitado"),
-        getStatus: () => ({ 
-            error: "Notificaciones no disponibles",
-            initialized: false,
-            permission: "denied"
-        }),
-        showNotification: () => console.log("ℹ️ Notificaciones deshabilitadas"),
-        testNotification: () => {
-            if (typeof showToast === 'function') {
-                showToast('Notificaciones deshabilitadas', 'warning');
+        getDashboardData: async function(month, year) {
+            console.log('📊 Usando fallback getDashboardData');
+            try {
+                // Intentar obtener datos reales si es posible
+                if (window.auth && window.auth.currentUser) {
+                    const db = firebase.firestore();
+                    const transactionsRef = db.collection('users').doc(window.auth.currentUser.uid).collection('transactions');
+                    
+                    const startDate = new Date(year, month - 1, 1);
+                    const endDate = new Date(year, month, 0);
+                    
+                    const snapshot = await transactionsRef
+                        .where('date', '>=', startDate.toISOString().split('T')[0])
+                        .where('date', '<=', endDate.toISOString().split('T')[0])
+                        .get();
+                    
+                    const transactions = [];
+                    let totalIncome = 0;
+                    let totalExpense = 0;
+                    const categories = { income: {}, expense: {} };
+                    
+                    snapshot.forEach(doc => {
+                        const transaction = doc.data();
+                        transaction.id = doc.id;
+                        transactions.push(transaction);
+                        
+                        if (transaction.type === 'income') {
+                            totalIncome += transaction.amount;
+                            categories.income[transaction.category] = (categories.income[transaction.category] || 0) + transaction.amount;
+                        } else {
+                            totalExpense += transaction.amount;
+                            categories.expense[transaction.category] = (categories.expense[transaction.category] || 0) + transaction.amount;
+                        }
+                    });
+                    
+                    return {
+                        summary: {
+                            totalIncome,
+                            totalExpense,
+                            balance: totalIncome - totalExpense,
+                            month,
+                            year
+                        },
+                        transactions,
+                        categories
+                    };
+                }
+            } catch (error) {
+                console.error('Error en fallback getDashboardData:', error);
             }
+            
+            // Fallback básico
+            return {
+                summary: {
+                    totalIncome: 0,
+                    totalExpense: 0,
+                    balance: 0,
+                    month: month,
+                    year: year
+                },
+                transactions: [],
+                categories: {
+                    income: {},
+                    expense: {}
+                }
+            };
         },
-        testUpcomingTransactions: () => {
-            if (typeof showToast === 'function') {
-                showToast('Notificaciones deshabilitadas', 'warning');
+        
+        getTransactions: async function(options = {}) {
+            console.log('📋 Usando fallback getTransactions');
+            try {
+                if (window.auth && window.auth.currentUser) {
+                    const db = firebase.firestore();
+                    const transactionsRef = db.collection('users').doc(window.auth.currentUser.uid).collection('transactions');
+                    
+                    let query = transactionsRef;
+                    
+                    if (options.month && options.year) {
+                        const startDate = new Date(options.year, options.month - 1, 1);
+                        const endDate = new Date(options.year, options.month, 0);
+                        query = query.where('date', '>=', startDate.toISOString().split('T')[0])
+                                    .where('date', '<=', endDate.toISOString().split('T')[0]);
+                    }
+                    
+                    const snapshot = await query.orderBy('date', 'desc').get();
+                    const transactions = [];
+                    
+                    snapshot.forEach(doc => {
+                        const transaction = doc.data();
+                        transaction.id = doc.id;
+                        transactions.push(transaction);
+                    });
+                    
+                    return transactions;
+                }
+            } catch (error) {
+                console.error('Error en fallback getTransactions:', error);
             }
+            
+            return [];
         },
-        requestPermission: async () => false
+        
+        addTransaction: async function(transaction) {
+            console.log('➕ Usando fallback addTransaction');
+            try {
+                if (window.auth && window.auth.currentUser) {
+                    const db = firebase.firestore();
+                    const transactionsRef = db.collection('users').doc(window.auth.currentUser.uid).collection('transactions');
+                    
+                    await transactionsRef.add(transaction);
+                    showToast('Transacción agregada correctamente', 'success');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error en fallback addTransaction:', error);
+                showToast('Error al agregar transacción: ' + error.message, 'danger');
+                throw error;
+            }
+            
+            showToast('TransactionManager no disponible', 'warning');
+            throw new Error('TransactionManager no disponible');
+        },
+        
+        updateTransaction: async function(id, transaction) {
+            console.log('✏️ Usando fallback updateTransaction');
+            try {
+                if (window.auth && window.auth.currentUser) {
+                    const db = firebase.firestore();
+                    const transactionRef = db.collection('users').doc(window.auth.currentUser.uid).collection('transactions').doc(id);
+                    
+                    await transactionRef.update(transaction);
+                    showToast('Transacción actualizada correctamente', 'success');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error en fallback updateTransaction:', error);
+                showToast('Error al actualizar transacción: ' + error.message, 'danger');
+                throw error;
+            }
+            
+            showToast('TransactionManager no disponible', 'warning');
+            throw new Error('TransactionManager no disponible');
+        },
+        
+        deleteTransaction: async function(id) {
+            console.log('🗑️ Usando fallback deleteTransaction');
+            try {
+                if (window.auth && window.auth.currentUser) {
+                    const db = firebase.firestore();
+                    const transactionRef = db.collection('users').doc(window.auth.currentUser.uid).collection('transactions').doc(id);
+                    
+                    await transactionRef.delete();
+                    showToast('Transacción eliminada correctamente', 'success');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error en fallback deleteTransaction:', error);
+                showToast('Error al eliminar transacción: ' + error.message, 'danger');
+                throw error;
+            }
+            
+            showToast('TransactionManager no disponible', 'warning');
+            throw new Error('TransactionManager no disponible');
+        },
+        
+        processTransactionDate: function(transaction) {
+            // Función básica de procesamiento de fecha
+            if (transaction.date && typeof transaction.date === 'string') {
+                return new Date(transaction.date);
+            }
+            if (transaction.date && typeof transaction.date.toDate === 'function') {
+                return transaction.date.toDate();
+            }
+            return new Date();
+        }
+    };
+}
+
+function createFallbackBudgetManager() {
+    console.warn('⚠️ Usando BudgetManager de fallback');
+    return {
+        createBudget: async function(budgetData) {
+            showToast('BudgetManager no disponible', 'warning');
+            throw new Error('BudgetManager no disponible');
+        },
+        getBudgetStatus: async function(month, year) {
+            return [];
+        },
+        getAllUserBudgets: async function() {
+            return [];
+        },
+        updateBudget: async function(id, budgetData) {
+            showToast('BudgetManager no disponible', 'warning');
+            throw new Error('BudgetManager no disponible');
+        },
+        deleteBudget: async function(id) {
+            showToast('BudgetManager no disponible', 'warning');
+            throw new Error('BudgetManager no disponible');
+        }
     };
 }
 
