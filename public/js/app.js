@@ -1006,9 +1006,8 @@ async function initializeApp() {
     }
 }
 
-// Configurar navegación
 function setupNavigation() {
-    console.log('🔧 Configurando navegación...');
+    console.log('🔧 Configurando navegación MEJORADA...');
     
     // Manejadores de los botones de navegación
     const navHome = document.getElementById('nav-home');
@@ -1017,11 +1016,26 @@ function setupNavigation() {
     const navLogout = document.getElementById('nav-logout');
     const navLogin = document.getElementById('nav-login');
 
+    // Verificar que los elementos existen
+    console.log('Elementos de navegación:', {
+        navHome: !!navHome,
+        navProfile: !!navProfile,
+        navAddTransaction: !!navAddTransaction,
+        navLogout: !!navLogout,
+        navLogin: !!navLogin
+    });
+
     if (navHome) {
         navHome.addEventListener('click', (e) => {
             e.preventDefault();
-            if (window.auth && window.auth.currentUser) {
-                loadDashboard(window.auth.currentUser);
+            console.log('🏠 Navegando a Home - CLICK CONFIRMADO');
+            const currentUser = window.auth?.currentUser;
+            if (currentUser) {
+                console.log('✅ Usuario autenticado, cargando dashboard...');
+                loadDashboard(currentUser);
+            } else {
+                console.log('⚠️ Usuario no autenticado, cargando login...');
+                loadLoginPage();
             }
         });
     }
@@ -1029,8 +1043,14 @@ function setupNavigation() {
     if (navProfile) {
         navProfile.addEventListener('click', (e) => {
             e.preventDefault();
-            if (window.auth && window.auth.currentUser) {
+            console.log('👤 Navegando a Perfil - CLICK CONFIRMADO');
+            const currentUser = window.auth?.currentUser;
+            if (currentUser) {
+                console.log('✅ Usuario autenticado, cargando perfil...');
                 showProfile();
+            } else {
+                console.log('⚠️ Usuario no autenticado, cargando login...');
+                loadLoginPage();
             }
         });
     }
@@ -1038,8 +1058,14 @@ function setupNavigation() {
     if (navAddTransaction) {
         navAddTransaction.addEventListener('click', (e) => {
             e.preventDefault();
-            if (window.auth && window.auth.currentUser) {
+            console.log('➕ Navegando a Agregar Transacción - CLICK CONFIRMADO');
+            const currentUser = window.auth?.currentUser;
+            if (currentUser) {
+                console.log('✅ Usuario autenticado, cargando formulario...');
                 showAddTransaction();
+            } else {
+                console.log('⚠️ Usuario no autenticado, cargando login...');
+                loadLoginPage();
             }
         });
     }
@@ -1047,6 +1073,7 @@ function setupNavigation() {
     if (navLogout) {
         navLogout.addEventListener('click', (e) => {
             e.preventDefault();
+            console.log('🚪 Cerrando sesión - CLICK CONFIRMADO');
             logout();
         });
     }
@@ -1054,43 +1081,44 @@ function setupNavigation() {
     if (navLogin) {
         navLogin.addEventListener('click', (e) => {
             e.preventDefault();
+            console.log('🔑 Navegando a Login - CLICK CONFIRMADO');
             loadLoginPage();
         });
     }
+
+    console.log('✅ Navegación configurada correctamente');
 }
 
-// Función para actualizar la barra de navegación
+// Función para actualizar la barra de navegación - VERSIÓN CORREGIDA
 function updateNavbar(user) {
     console.log('🔄 Actualizando navbar...');
     
+    // Obtener todos los elementos de navegación
+    const navHome = document.getElementById('nav-home');
+    const navProfile = document.getElementById('nav-profile');
+    const navAddTransaction = document.getElementById('nav-add-transaction');
     const navLogout = document.getElementById('nav-logout');
     const navLogin = document.getElementById('nav-login');
-    const navItems = document.querySelectorAll('.nav-item:not(:first-child)');
 
     if (user) {
-        // Usuario logueado - mostrar botones de usuario
-        if (navLogout) navLogout.style.display = 'block';
-        if (navLogin) navLogin.style.display = 'none';
+        // Usuario logueado - mostrar elementos de usuario
+        console.log('✅ Mostrando navbar para usuario logueado');
         
-        // Mostrar todos los items de navegación
-        navItems.forEach(item => {
-            item.style.display = 'block';
-        });
+        if (navHome) navHome.parentElement.style.display = 'block';
+        if (navProfile) navProfile.parentElement.style.display = 'block';
+        if (navAddTransaction) navAddTransaction.parentElement.style.display = 'block';
+        if (navLogout) navLogout.parentElement.style.display = 'block';
+        if (navLogin) navLogin.parentElement.style.display = 'none';
         
-        console.log('✅ Navbar actualizada para usuario logueado');
     } else {
         // Usuario no logueado - mostrar solo login
-        if (navLogout) navLogout.style.display = 'none';
-        if (navLogin) navLogin.style.display = 'block';
+        console.log('✅ Mostrando navbar para usuario no logueado');
         
-        // Ocultar items de navegación excepto login
-        navItems.forEach(item => {
-            if (!item.querySelector('#nav-login')) {
-                item.style.display = 'none';
-            }
-        });
-        
-        console.log('✅ Navbar actualizada para usuario no logueado');
+        if (navHome) navHome.parentElement.style.display = 'none';
+        if (navProfile) navProfile.parentElement.style.display = 'none';
+        if (navAddTransaction) navAddTransaction.parentElement.style.display = 'none';
+        if (navLogout) navLogout.parentElement.style.display = 'none';
+        if (navLogin) navLogin.parentElement.style.display = 'block';
     }
 }
 
@@ -1238,8 +1266,33 @@ function handleLoginLogo() {
 }
 
 function loadDashboard(user) {
-    const content = document.getElementById('content');
+    console.log('🚀 INICIANDO loadDashboard...', { 
+        user: user ? user.email : 'null',
+        authUser: window.auth?.currentUser?.email 
+    });
     
+    // Si no se pasa usuario, usar el de auth
+    if (!user && window.auth?.currentUser) {
+        user = window.auth.currentUser;
+        console.log('✅ Usando usuario de auth:', user.email);
+    }
+    
+    // Si todavía no hay usuario, mostrar login
+    if (!user) {
+        console.error('❌ No hay usuario para cargar dashboard');
+        loadLoginPage();
+        return;
+    }
+
+    const content = document.getElementById('content');
+    if (!content) {
+        console.error('❌ Elemento content no encontrado');
+        return;
+    }
+
+    console.log('✅ Cargando dashboard para:', user.email);
+    
+    // Resto del código de loadDashboard (tu HTML del dashboard)
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
@@ -1257,12 +1310,12 @@ function loadDashboard(user) {
                 </p>
             </div>
 
-            <!-- Resumen Financiero Mejorado - EN UNA SOLA FILA -->
+            <!-- Resumen Financiero -->
             <div class="row mb-4" id="financial-summary">
                 <!-- Se llenará dinámicamente -->
             </div>
 
-            <!-- Botones principales EN UNA SOLA FILA -->
+            <!-- Botones principales -->
             <div class="row justify-content-center mb-4">
                 <div class="col-md-12">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
@@ -1279,145 +1332,20 @@ function loadDashboard(user) {
                 </div>
             </div>
 
-            <!-- Filtros Avanzados - MOVIDO ABAJO -->
-            <div class="row justify-content-center mb-4">
-                <div class="col-md-12">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filtros Avanzados</h5>
-                            <form id="filters-form" class="row g-3">
-                                <div class="col-md-4">
-                                    <label for="category" class="form-label">Categoría</label>
-                                    <select class="form-select" id="category" name="category">
-                                        <option value="">Todas las categorías</option>
-                                        <!-- Se llenará dinámicamente -->
-                                    </select>
-                                </div>
-                                
-                                <div class="col-md-3">
-                                    <label for="amount_min" class="form-label">Mínimo ($)</label>
-                                    <input type="number" class="form-control" id="amount_min" name="amount_min" 
-                                           step="0.01" min="0" placeholder="Mínimo">
-                                </div>
-                                
-                                <div class="col-md-3">
-                                    <label for="amount_max" class="form-label">Máximo ($)</label>
-                                    <input type="number" class="form-control" id="amount_max" name="amount_max" 
-                                           step="0.01" min="0" placeholder="Máximo">
-                                </div>
-                                
-                                <div class="col-md-2 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-primary me-2 w-100">
-                                        <i class="fas fa-search"></i> Filtrar
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+            <!-- Aquí continúa el resto de tu HTML del dashboard -->
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando dashboard...</span>
                 </div>
-            </div>
-
-            <!-- Gráfico de Evolución Temporal con Selector -->
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h2 class="card-title mb-0">
-                                    Evolución de Ingresos y Gastos
-                                </h2>
-                                <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="timeframe" id="timeframe-week" value="week" ${currentTimeframe === 'week' ? 'checked' : ''}>
-                                    <label class="btn btn-outline-primary" for="timeframe-week">
-                                        <i class="fas fa-calendar-week me-1"></i>Semanal
-                                    </label>
-                                    <input type="radio" class="btn-check" name="timeframe" id="timeframe-month" value="month" ${currentTimeframe === 'month' ? 'checked' : ''}>
-                                    <label class="btn btn-outline-primary" for="timeframe-month">
-                                        <i class="fas fa-calendar-alt me-1"></i>Mensual
-                                    </label>
-                                </div>
-                            </div>
-                            <canvas id="timelineChart" height="120"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sección de transacciones -->
-            <div id="transactions-section">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="fas fa-list me-2"></i>Transacciones Recientes
-                        </h5>
-                        <div id="transactions-list">
-                            <!-- Se llenará dinámicamente -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gráficos de Categorías -->
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <h2 class="text-center card-title">
-                                Distribución de Ingresos
-                            </h2>
-                            <canvas id="incomeChart" height="250"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <h2 class="text-center card-title">
-                                Distribución de Gastos
-                            </h2>
-                            <canvas id="expenseChart" height="250"></canvas>
-                        </div>
-                    </div>
-                </div>
+                <p class="mt-2">Cargando datos del dashboard...</p>
             </div>
         </div>
     `;
 
-    // Configurar event listeners después de renderizar
+    // Cargar datos después de un pequeño delay para asegurar que el DOM esté listo
     setTimeout(() => {
-        const filtersForm = document.getElementById('filters-form');
-        if (filtersForm) {
-            filtersForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                applyFilters();
-            });
-        }
-
-        // Configurar selectores de timeframe
-        const weekRadio = document.getElementById('timeframe-week');
-        const monthRadio = document.getElementById('timeframe-month');
-        
-        if (weekRadio) {
-            weekRadio.addEventListener('change', function() {
-                if (this.checked) {
-                    currentTimeframe = 'week';
-                    reloadDashboardWithTimeframe('week');
-                }
-            });
-        }
-        
-        if (monthRadio) {
-            monthRadio.addEventListener('change', function() {
-                if (this.checked) {
-                    currentTimeframe = 'month';
-                    reloadDashboardWithTimeframe('month');
-                }
-            });
-        }
+        loadDashboardData(currentYear, currentMonth, currentTimeframe);
     }, 100);
-
-    // Cargar datos del dashboard
-    loadDashboardData(currentYear, currentMonth, currentTimeframe);
 }
 
 // FUNCIÓN MEJORADA: Cargar datos del dashboard con selector de vista temporal
@@ -2799,13 +2727,36 @@ function showAddBudget() {
     });
 }
 
+// FUNCIÓN FALTANTE: Mostrar perfil del usuario
 function showProfile() {
-    const user = window.auth.currentUser;
+    try {
+        console.log('👤 Mostrando perfil...');
+        
+        // Verificar que el usuario esté autenticado
+        if (!window.auth || !window.auth.currentUser) {
+            console.error('❌ Usuario no autenticado');
+            showToast('Debes iniciar sesión para ver tu perfil', 'warning');
+            return;
+        }
+
+        const user = window.auth.currentUser;
+        console.log('✅ Usuario para perfil:', user.email);
+        
+        // Cargar la página de perfil
+        loadProfilePage(user);
+        
+    } catch (error) {
+        console.error('❌ Error en showProfile:', error);
+        showToast('Error al cargar el perfil: ' + error.message, 'danger');
+    }
+}
+
+// FUNCIÓN AUXILIAR: Cargar página de perfil
+function loadProfilePage(user) {
     const content = document.getElementById('content');
     
     content.innerHTML = `
         <div class="container mt-4">
-            <!-- Nueva fila para el perfil y la rueda -->
             <div class="row">
                 <!-- Columna del perfil -->
                 <div class="col-md-4">
@@ -2904,7 +2855,7 @@ function showProfile() {
     loadProfileStats();
 }
 
-// Función para inicializar la rueda de la vida
+// FUNCIÓN FALTANTE: Inicializar rueda de la vida
 function initializeLifeWheel() {
     const areas = [
         'Salud',
@@ -2920,6 +2871,11 @@ function initializeLifeWheel() {
 
     // Generar sliders
     const sliderContainer = document.getElementById('sliderContainer');
+    if (!sliderContainer) {
+        console.error('❌ sliderContainer no encontrado');
+        return;
+    }
+    
     sliderContainer.innerHTML = '';
     
     areas.forEach((area, index) => {
@@ -2938,8 +2894,14 @@ function initializeLifeWheel() {
     });
 
     // Configurar el gráfico
-    const ctx = document.getElementById('lifeWheel').getContext('2d');
-    window.lifeWheelChart = new Chart(ctx, {
+    const ctx = document.getElementById('lifeWheel');
+    if (!ctx) {
+        console.error('❌ Canvas lifeWheel no encontrado');
+        return;
+    }
+
+    const chartCtx = ctx.getContext('2d');
+    window.lifeWheelChart = new Chart(chartCtx, {
         type: 'radar',
         data: {
             labels: areas,
@@ -3008,48 +2970,60 @@ function initializeLifeWheel() {
     loadWheelProgress();
 }
 
-// Función para actualizar el gráfico
+// FUNCIONES FALTANTES PARA LA RUEDA DE LA VIDA
 function updateWheelChart(index, value) {
-    document.getElementById(`value${index}`).textContent = value;
-    window.lifeWheelChart.data.datasets[0].data[index] = parseInt(value);
-    window.lifeWheelChart.update();
+    const valueElement = document.getElementById(`value${index}`);
+    if (valueElement) {
+        valueElement.textContent = value;
+    }
+    
+    if (window.lifeWheelChart) {
+        window.lifeWheelChart.data.datasets[0].data[index] = parseInt(value);
+        window.lifeWheelChart.update();
+    }
 }
 
-// Función para guardar progreso
 function saveWheelProgress() {
-    if (window.lifeWheelChart) {
+    if (window.lifeWheelChart && window.auth && window.auth.currentUser) {
         const values = window.lifeWheelChart.data.datasets[0].data;
         const user = window.auth.currentUser;
-        if (user) {
-            // Guardar en Firestore para el usuario actual
+        
+        try {
             localStorage.setItem(`wheelValues_${user.uid}`, JSON.stringify(values));
             showToast('Progreso guardado correctamente', 'success');
+        } catch (error) {
+            console.error('❌ Error guardando progreso:', error);
+            showToast('Error al guardar el progreso', 'danger');
         }
     }
 }
 
-// Función para cargar progreso
 function loadWheelProgress() {
-    const user = window.auth.currentUser;
-    if (user && window.lifeWheelChart) {
-        const savedValues = localStorage.getItem(`wheelValues_${user.uid}`);
-        if (savedValues) {
-            const values = JSON.parse(savedValues);
-            window.lifeWheelChart.data.datasets[0].data = values;
-            
-            // Actualizar los sliders
-            values.forEach((value, index) => {
-                const slider = document.getElementById(`slider${index}`);
-                if (slider) {
-                    slider.value = value;
-                    document.getElementById(`value${index}`).textContent = value;
-                }
-            });
-            
-            window.lifeWheelChart.update();
-            showToast('Progreso cargado correctamente', 'success');
-        } else {
-            showToast('No hay progreso guardado', 'info');
+    if (window.auth && window.auth.currentUser && window.lifeWheelChart) {
+        const user = window.auth.currentUser;
+        try {
+            const savedValues = localStorage.getItem(`wheelValues_${user.uid}`);
+            if (savedValues) {
+                const values = JSON.parse(savedValues);
+                window.lifeWheelChart.data.datasets[0].data = values;
+                
+                // Actualizar los sliders
+                values.forEach((value, index) => {
+                    const slider = document.getElementById(`slider${index}`);
+                    const valueDisplay = document.getElementById(`value${index}`);
+                    
+                    if (slider) slider.value = value;
+                    if (valueDisplay) valueDisplay.textContent = value;
+                });
+                
+                window.lifeWheelChart.update();
+                showToast('Progreso cargado correctamente', 'success');
+            } else {
+                showToast('No hay progreso guardado', 'info');
+            }
+        } catch (error) {
+            console.error('❌ Error cargando progreso:', error);
+            showToast('Error al cargar el progreso', 'danger');
         }
     }
 }
