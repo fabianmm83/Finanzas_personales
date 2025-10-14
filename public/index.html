@@ -42,38 +42,60 @@
 
         /* Modo oscuro */
         @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #121212;
-                --text-color: #e0e0e0;
-                --card-bg: #1e1e1e;
-                --footer-bg: #000000;
-                --footer-text: #e0e0e0;
-                --navbar-bg: linear-gradient(135deg, #121212, #2c2c2c);
-                --card-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            }
-            
-            .card {
-                border: 1px solid #333;
-            }
-            
-            .form-control, .form-select {
-                background-color: #2d2d2d;
-                border-color: #444;
-                color: #e0e0e0;
-            }
-            
-            .form-control:focus, .form-select:focus {
-                background-color: #2d2d2d;
-                border-color: var(--primary-color);
-                color: #e0e0e0;
-            }
-            
-            .table {
-                --bs-table-bg: var(--card-bg);
-                --bs-table-color: var(--text-color);
-                --bs-table-border-color: #444;
-            }
-        }
+    :root {
+        --bg-color: #121212;
+        --text-color: #e0e0e0;
+        --card-bg: #1e1e1e;
+        --footer-bg: #000000;
+        --footer-text: #e0e0e0;
+        --navbar-bg: linear-gradient(135deg, #121212, #2c2c2c);
+        --card-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    
+    .card {
+        border: 1px solid #333;
+    }
+    
+    .form-control, .form-select {
+        background-color: #2d2d2d;
+        border-color: #444;
+        color: #e0e0e0;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #2d2d2d;
+        border-color: var(--primary-color);
+        color: #e0e0e0;
+    }
+    
+    .table {
+        --bs-table-bg: var(--card-bg);
+        --bs-table-color: #ffffff; /* Cambiado a blanco para mejor contraste */
+        --bs-table-border-color: #444;
+    }
+    
+    /* Asegurar que todas las tablas tengan texto blanco */
+    .table th, .table td {
+        color: #ffffff !important;
+    }
+    
+    /* Fechas en dashboard */
+    .text-muted {
+        color: #e0e0e0 !important; /* Cambiar gris oscuro por gris claro */
+    }
+    
+    /* Texto en cards */
+    .card, .card-body, .card-title, .card-text {
+        color: #e0e0e0;
+    }
+}
+
+/* Estilos para las gráficas en modo oscuro */
+@media (prefers-color-scheme: dark) {
+    .chart-container canvas {
+        filter: brightness(0.9) contrast(1.1);
+    }
+}
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -724,41 +746,7 @@
         window.addEventListener('load', checkPWAIcon);
         
         // Función auxiliar para mostrar toasts (si no existe)
-        function showToast(message, type = 'info') {
-            // Esta función debe estar implementada en tu app.js
-            // Si no existe, la creamos aquí como respaldo
-            if (typeof window.showToast !== 'function') {
-                console.log(`Toast (${type}): ${message}`);
-                
-                // Crear un toast básico si no existe la función
-                const toastContainer = document.getElementById('toast-container');
-                if (toastContainer) {
-                    const toastId = 'toast-' + Date.now();
-                    const toastHTML = `
-                        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
-                            <div class="d-flex">
-                                <div class="toast-body">
-                                    ${message}
-                                </div>
-                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                            </div>
-                        </div>
-                    `;
-                    toastContainer.innerHTML += toastHTML;
-                    
-                    const toastElement = document.getElementById(toastId);
-                    const toast = new bootstrap.Toast(toastElement);
-                    toast.show();
-                    
-                    // Eliminar el toast del DOM después de que se oculte
-                    toastElement.addEventListener('hidden.bs.toast', function() {
-                        toastElement.remove();
-                    });
-                }
-            } else {
-                window.showToast(message, type);
-            }
-        }
-    </script>
+        
+        </script>
 </body>
 </html>
