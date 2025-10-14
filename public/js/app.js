@@ -7,21 +7,28 @@ let chartInstances = {
 
 let currentTimeframe = 'week'; // 'week' o 'month'
 
-// ==================== NOTIFICATION MANAGER ====================
-// Agrega esto JUSTO DESPUÉS de tus otros managers y ANTES de initializeApp
-
+// ==================== NOTIFICATION MANAGER - VERSIÓN CORREGIDA ====================
 class NotificationManager {
     constructor() {
         this.notificationPermission = null;
         this.dailyReminderTimeout = null;
         this.upcomingTransactionsCheck = null;
+        this.isInitialized = false;
         this.init();
     }
 
     async init() {
-        await this.requestPermission();
-        this.scheduleDailyReminder();
-        this.scheduleUpcomingTransactionsCheck();
+        if (this.isInitialized) return;
+        
+        try {
+            await this.requestPermission();
+            this.scheduleDailyReminder();
+            this.scheduleUpcomingTransactionsCheck();
+            this.isInitialized = true;
+            console.log("✅ NotificationManager inicializado correctamente");
+        } catch (error) {
+            console.error("❌ Error inicializando NotificationManager:", error);
+        }
     }
 
     // Solicitar permiso para notificaciones
@@ -82,25 +89,41 @@ class NotificationManager {
             clearTimeout(this.dailyReminderTimeout);
         }
 
-        // Programar para mañana a las 18:00 (6 PM)
-        const now = new Date();
-        const targetTime = new Date();
-        targetTime.setHours(18, 0, 0, 0); // 6 PM
+        // CONFIGURACIÓN MEJORADA - Modo prueba/producción
+        const isTestMode = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.search.includes('test=true');
+        
+        if (isTestMode) {
+            console.log("🧪 MODO PRUEBA: Recordatorio en 2 minutos");
+            this.dailyReminderTimeout = setTimeout(() => {
+                this.showDailyReminder();
+                // Programar siguiente para 5 minutos después (para pruebas continuas)
+                setTimeout(() => this.scheduleDailyReminder(), 300000); // 5 minutos
+            }, 120000); // 2 minutos para pruebas
+            
+        } else {
+            // CÓDIGO PRODUCCIÓN
+            // Programar para mañana a las 18:00 (6 PM)
+            const now = new Date();
+            const targetTime = new Date();
+            targetTime.setHours(18, 0, 0, 0); // 6 PM
 
-        // Si ya pasó las 6 PM hoy, programar para mañana
-        if (now > targetTime) {
-            targetTime.setDate(targetTime.getDate() + 1);
+            // Si ya pasó las 6 PM hoy, programar para mañana
+            if (now > targetTime) {
+                targetTime.setDate(targetTime.getDate() + 1);
+            }
+
+            const timeUntilReminder = targetTime.getTime() - now.getTime();
+
+            this.dailyReminderTimeout = setTimeout(() => {
+                this.showDailyReminder();
+                // Programar la próxima para mañana
+                this.scheduleDailyReminder();
+            }, timeUntilReminder);
+
+            console.log(`Recordatorio diario programado para: ${targetTime}`);
         }
-
-        const timeUntilReminder = targetTime.getTime() - now.getTime();
-
-        this.dailyReminderTimeout = setTimeout(() => {
-            this.showDailyReminder();
-            // Programar la próxima para mañana
-            this.scheduleDailyReminder();
-        }, timeUntilReminder);
-
-        console.log(`Recordatorio diario programado para: ${targetTime}`);
     }
 
     showDailyReminder() {
@@ -128,39 +151,72 @@ class NotificationManager {
 
     // Verificar transacciones próximas a vencer
     async scheduleUpcomingTransactionsCheck() {
-        // Verificar cada hora
-        this.upcomingTransactionsCheck = setInterval(async () => {
-            await this.checkUpcomingTransactions();
-        }, 60 * 60 * 1000); // Cada hora
+        // CONFIGURACIÓN MEJORADA - Modo prueba/producción
+        const isTestMode = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.search.includes('test=true');
+        
+        if (isTestMode) {
+            console.log("🧪 MODO PRUEBA: Verificación cada 2 minutos");
+            this.upcomingTransactionsCheck = setInterval(async () => {
+                await this.checkUpcomingTransactions();
+            }, 120000); // 2 minutos para pruebas
+        } else {
+            // CÓDIGO PRODUCCIÓN
+            // Verificar cada hora
+            this.upcomingTransactionsCheck = setInterval(async () => {
+                await this.checkUpcomingTransactions();
+            }, 60 * 60 * 1000); // Cada hora
+        }
 
         // Verificar inmediatamente al cargar
         setTimeout(() => this.checkUpcomingTransactions(), 5000);
     }
 
+    // CORREGIDO: Verificación segura de Firebase
     async checkUpcomingTransactions() {
-        if (!auth || !auth.currentUser) return;
+        // VERIFICACIÓN SEGURA DE DEPENDENCIAS
+        if (!window.auth || !auth.currentUser || typeof firebase === 'undefined') {
+            console.log('⏳ Firebase/Auth no está listo, reintentando en 10 segundos...');
+            setTimeout(() => this.checkUpcomingTransactions(), 10000);
+            return;
+        }
 
         try {
             const today = new Date();
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
 
-            // Obtener transacciones recurrentes o con fechas futuras
-            const transactionsRef = firestore.collection('users').doc(auth.currentUser.uid).collection('transactions');
+            // VERIFICACIÓN SEGURA DE FIRESTORE
+            if (!firebase.firestore) {
+                console.error('❌ Firestore no disponible');
+                return;
+            }
+
+            const db = firebase.firestore();
+            const transactionsRef = db.collection('users').doc(auth.currentUser.uid).collection('transactions');
+            
+            const todayStr = today.toISOString().split('T')[0];
+            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            
+            console.log('🔍 Buscando transacciones entre:', todayStr, 'y', tomorrowStr);
+
             const snapshot = await transactionsRef
-                .where('date', '>=', today.toISOString().split('T')[0])
-                .where('date', '<=', tomorrow.toISOString().split('T')[0])
+                .where('date', '>=', todayStr)
+                .where('date', '<=', tomorrowStr)
                 .get();
 
             const upcomingTransactions = [];
             snapshot.forEach(doc => {
                 const transaction = doc.data();
+                transaction.id = doc.id;
                 if (this.isTransactionUpcoming(transaction)) {
                     upcomingTransactions.push(transaction);
                 }
             });
 
-            // Mostrar notificación si hay transacciones próximas
+            console.log('📅 Transacciones próximas encontradas:', upcomingTransactions.length);
+
             if (upcomingTransactions.length > 0) {
                 this.showUpcomingTransactionsAlert(upcomingTransactions);
             }
@@ -177,7 +233,20 @@ class NotificationManager {
         tomorrow.setDate(tomorrow.getDate() + 1);
 
         // Verificar si la transacción es para mañana
-        return transactionDate.toDateString() === tomorrow.toDateString();
+        const isTomorrow = transactionDate.toDateString() === tomorrow.toDateString();
+        
+        // Para pruebas, también considerar transacciones de hoy
+        const isToday = transactionDate.toDateString() === today.toDateString();
+        
+        // En modo prueba, mostrar también transacciones de hoy
+        const isTestMode = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.search.includes('test=true');
+        if (isTestMode) {
+            return isTomorrow || isToday;
+        }
+        
+        return isTomorrow;
     }
 
     showUpcomingTransactionsAlert(transactions) {
@@ -187,7 +256,7 @@ class NotificationManager {
             return acc;
         }, {});
 
-        let body = `Tienes ${count} transacción(es) para mañana:`;
+        let body = `Tienes ${count} transacción(es) próximas:`;
         
         if (transactionTypes.income) {
             body += ` ${transactionTypes.income} ingreso(s)`;
@@ -206,7 +275,7 @@ class NotificationManager {
 
         // Toast en la app
         if (typeof showToast === 'function') {
-            showToast(`📅 Tienes ${count} transacción(es) para mañana`, 'warning');
+            showToast(`📅 Tienes ${count} transacción(es) próximas`, 'warning');
         }
     }
 
@@ -220,17 +289,120 @@ class NotificationManager {
     cleanup() {
         if (this.dailyReminderTimeout) {
             clearTimeout(this.dailyReminderTimeout);
+            this.dailyReminderTimeout = null;
         }
         if (this.upcomingTransactionsCheck) {
             clearInterval(this.upcomingTransactionsCheck);
+            this.upcomingTransactionsCheck = null;
         }
+        console.log('🧹 Notificaciones limpiadas');
+    }
+
+    // MÉTODO DE PRUEBA - Forzar notificación inmediata
+    testNotification() {
+        console.log("🔔 Probando notificación...");
+        
+        // Probar notificación diaria
+        this.showNotification('🧪 Prueba de Notificación', {
+            body: '¡Las notificaciones están funcionando correctamente!',
+            icon: '/static/logo_pwa.png',
+            badge: '/static/logo_pwa.png',
+            tag: 'test-notification',
+            requireInteraction: true,
+            actions: [
+                {
+                    action: 'add-transaction',
+                    title: 'Agregar Transacción'
+                },
+                {
+                    action: 'view-dashboard',
+                    title: 'Ver Dashboard'
+                }
+            ]
+        });
+        
+        if (typeof showToast === 'function') {
+            showToast('🔔 Notificación de prueba enviada', 'success');
+        }
+    }
+
+    // Probar notificación de transacciones próximas
+    testUpcomingTransactions() {
+        console.log("🔔 Probando notificación de transacciones...");
+        
+        const testTransactions = [
+            { 
+                id: 'test-1', 
+                type: 'expense', 
+                amount: 150, 
+                category: 'Comida', 
+                description: 'Almuerzo de prueba',
+                date: new Date().toISOString()
+            },
+            { 
+                id: 'test-2', 
+                type: 'income', 
+                amount: 500, 
+                category: 'Salario', 
+                description: 'Pago mensual de prueba',
+                date: new Date().toISOString()
+            }
+        ];
+        
+        this.showUpcomingTransactionsAlert(testTransactions);
+    }
+
+    // CORREGIDO: Verificar estado actual de notificaciones de forma segura
+    getStatus() {
+        const status = {
+            permission: this.notificationPermission,
+            dailyReminder: {
+                scheduled: !!this.dailyReminderTimeout,
+                nextTime: this.getNextReminderTime()
+            },
+            transactionCheck: {
+                active: !!this.upcomingTransactionsCheck,
+                interval: 'Cada hora'
+            },
+            browserSupport: 'Notification' in window,
+            serviceWorker: 'serviceWorker' in navigator,
+            firestore: !!(typeof firebase !== 'undefined' && firebase.firestore),
+            auth: !!(window.auth && auth.currentUser),
+            initialized: this.isInitialized
+        };
+        
+        console.log('📊 Estado de Notificaciones:', status);
+        return status;
+    }
+
+    // Obtener hora del próximo recordatorio
+    getNextReminderTime() {
+        if (!this.dailyReminderTimeout) return 'No programado';
+        
+        // Para modo prueba
+        const isTestMode = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.search.includes('test=true');
+        if (isTestMode) {
+            const now = new Date();
+            const nextTime = new Date(now.getTime() + 120000); // 2 minutos
+            return `Prueba: ${nextTime.toLocaleTimeString()}`;
+        }
+        
+        const now = new Date();
+        const targetTime = new Date();
+        targetTime.setHours(18, 0, 0, 0);
+        
+        if (now > targetTime) {
+            targetTime.setDate(targetTime.getDate() + 1);
+        }
+        
+        return targetTime.toLocaleString();
     }
 }
 
 // Variable global para el manager de notificaciones
-let notificationManager;
-
-
+let notificationManager = null;
 
 
 
@@ -243,47 +415,87 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
-function initializeApp() {
-    showLoading(true);
-    
-    // Verificar si Firebase está cargado
-    if (typeof firebase === 'undefined' || !firebase.app) {
-        console.error("Firebase no se cargó correctamente");
-        showError("Error: Firebase no se pudo cargar. Verifica la conexión.");
-        return;
-    }
-    
-    console.log("Firebase detectado, verificando autenticación...");
-    
-    // Inicializar managers si no existen
+// FUNCIÓN PARA ESPERAR FIREBASE - NUEVA
+function waitForFirebase() {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const checkFirebase = () => {
+            attempts++;
+            
+            if (typeof firebase !== 'undefined' && firebase.app) {
+                console.log("✅ Firebase cargado correctamente");
+                resolve();
+                return;
+            }
+            
+            if (attempts >= maxAttempts) {
+                reject(new Error("Firebase no se cargó después de " + maxAttempts + " intentos"));
+                return;
+            }
+            
+            console.log("⏳ Esperando Firebase... intento " + attempts);
+            setTimeout(checkFirebase, 500);
+        };
+        
+        checkFirebase();
+    });
+}
+
+// FUNCIÓN PARA INICIALIZAR MANAGERS - NUEVA
+async function initializeManagers() {
+    // Inicializar TransactionManager primero
     if (typeof transactionManager === 'undefined') {
         console.log("Inicializando TransactionManager...");
         window.transactionManager = new TransactionManager();
     }
     
+    // Inicializar BudgetManager
     if (typeof budgetManager === 'undefined') {
         console.log("Inicializando BudgetManager...");
         window.budgetManager = new BudgetManager();
     }
     
-    // INICIALIZAR NOTIFICATION MANAGER - NUEVO
-    if (typeof notificationManager === 'undefined') {
+    // INICIALIZAR NOTIFICATION MANAGER - CON VERIFICACIÓN MEJORADA
+    if (!notificationManager) {
         console.log("Inicializando NotificationManager...");
         try {
             window.notificationManager = new NotificationManager();
-            console.log("✅ NotificationManager inicializado correctamente");
+            
+            // Verificar que se inicializó correctamente
+            setTimeout(() => {
+                if (notificationManager && notificationManager.getStatus) {
+                    const status = notificationManager.getStatus();
+                    if (!status.initialized) {
+                        console.warn("⚠️ NotificationManager no se inicializó completamente");
+                    } else {
+                        console.log("✅ NotificationManager completamente operativo");
+                    }
+                }
+            }, 2000);
+            
         } catch (error) {
-            console.error("❌ Error inicializando NotificationManager:", error);
+            console.error("❌ Error crítico inicializando NotificationManager:", error);
+            // No detener la aplicación si fallan las notificaciones
+            window.notificationManager = {
+                init: () => console.log("Notificaciones deshabilitadas"),
+                cleanup: () => console.log("Limpieza de notificaciones deshabilitada"),
+                restart: () => console.log("Reinicio de notificaciones deshabilitado"),
+                getStatus: () => ({ 
+                    error: "Notificaciones no disponibles",
+                    initialized: false 
+                }),
+                showNotification: () => console.log("Notificaciones deshabilitadas"),
+                testNotification: () => showToast('Notificaciones deshabilitadas', 'warning'),
+                testUpcomingTransactions: () => showToast('Notificaciones deshabilitadas', 'warning')
+            };
         }
     }
-    
-    // Configurar navegación
-    setupNavigation();
-    
-    // Configurar Service Worker para notificaciones
-    setupServiceWorkerNotifications();
-    
-    // Escuchar cambios de autenticación
+}
+
+// FUNCIÓN PARA CONFIGURAR AUTH LISTENER - NUEVA
+function setupAuthListener() {
     auth.onAuthStateChanged((user) => {
         console.log("Estado de autenticación:", user ? "Usuario logueado" : "No logueado");
         
@@ -293,16 +505,28 @@ function initializeApp() {
         if (user) {
             loadDashboard(user);
             
-            // Reiniciar notificaciones si el usuario está logueado
+            // Reiniciar notificaciones de forma segura
             if (notificationManager && typeof notificationManager.restart === 'function') {
-                notificationManager.restart();
+                setTimeout(() => {
+                    try {
+                        console.log("🔄 Reiniciando notificaciones para usuario...");
+                        notificationManager.restart();
+                    } catch (error) {
+                        console.error("Error reiniciando notificaciones:", error);
+                    }
+                }, 1000);
             }
         } else {
             loadLoginPage();
             
-            // Limpiar notificaciones si el usuario cierra sesión
+            // Limpiar notificaciones de forma segura
             if (notificationManager && typeof notificationManager.cleanup === 'function') {
-                notificationManager.cleanup();
+                try {
+                    console.log("🧹 Limpiando notificaciones por cierre de sesión...");
+                    notificationManager.cleanup();
+                } catch (error) {
+                    console.error("Error limpiando notificaciones:", error);
+                }
             }
         }
         showLoading(false);
@@ -313,6 +537,49 @@ function initializeApp() {
     });
 }
 
+// FUNCIÓN DE INICIALIZACIÓN PRINCIPAL - ACTUALIZADA
+async function initializeApp() {
+    showLoading(true);
+    
+    try {
+        // Verificar si Firebase está cargado con timeout
+        await waitForFirebase();
+        
+        console.log("Firebase detectado, verificando autenticación...");
+        
+        // Inicializar managers en orden correcto
+        await initializeManagers();
+        
+        // Configurar navegación
+        setupNavigation();
+        
+        // Configurar Service Worker para notificaciones
+        setupServiceWorkerNotifications();
+        
+        // Escuchar cambios de autenticación
+        setupAuthListener();
+        
+    } catch (error) {
+        console.error("Error crítico en inicialización:", error);
+        showError("Error al inicializar la aplicación: " + error.message);
+        showLoading(false);
+    }
+}
+
+// MANEJO DE ERRORES GLOBAL - AGREGAR AL FINAL
+window.addEventListener('error', function(event) {
+    console.error('❌ Error global capturado:', event.error);
+    if (typeof showToast === 'function') {
+        showToast('Ocurrió un error inesperado', 'danger');
+    }
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('❌ Promise rechazada no manejada:', event.reason);
+    if (typeof showToast === 'function') {
+        showToast('Error en operación asíncrona', 'danger');
+    }
+});
 // Función para configurar el Service Worker con notificaciones
 function setupServiceWorkerNotifications() {
     if ('serviceWorker' in navigator) {
@@ -2579,7 +2846,93 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-
+function loadProfilePage(user) {
+    const notificationStatus = notificationManager ? notificationManager.getStatus() : { permission: 'No inicializado' };
+    
+    const content = `
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-user me-2"></i>Mi Perfil</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" value="${user.email}" readonly>
+                        </div>
+                        
+                        <!-- PANEL DE CONTROL DE NOTIFICACIONES -->
+                        <div class="card mt-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Control de Notificaciones</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Estado actual -->
+                                <div class="alert alert-info mb-3">
+                                    <h6><i class="fas fa-info-circle me-2"></i>Estado Actual:</h6>
+                                    <div class="small">
+                                        <strong>Permisos:</strong> ${notificationStatus.permission || 'No verificado'}<br>
+                                        <strong>Recordatorio diario:</strong> ${notificationStatus.dailyReminder?.scheduled ? 'Programado' : 'No activo'}<br>
+                                        <strong>Próximo recordatorio:</strong> ${notificationStatus.dailyReminder?.nextTime || 'No disponible'}<br>
+                                        <strong>Verificación de transacciones:</strong> ${notificationStatus.transactionCheck?.active ? 'Activa' : 'Inactiva'}
+                                    </div>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="dailyReminders" checked>
+                                    <label class="form-check-label" for="dailyReminders">
+                                        Recordatorio diario (6 PM)
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="transactionAlerts" checked>
+                                    <label class="form-check-label" for="transactionAlerts">
+                                        Alertas de transacciones próximas
+                                    </label>
+                                </div>
+                                
+                                <!-- Botones de prueba -->
+                                <div class="border-top pt-3 mt-3">
+                                    <h6>Pruebas Rápidas:</h6>
+                                    <div class="btn-group w-100" role="group">
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="notificationManager.testNotification()">
+                                            <i class="fas fa-bell me-1"></i>Probar Notificación
+                                        </button>
+                                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="notificationManager.testUpcomingTransactions()">
+                                            <i class="fas fa-clock me-1"></i>Probar Transacciones
+                                        </button>
+                                    </div>
+                                    <div class="btn-group w-100 mt-2" role="group">
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="notificationManager.requestPermission()">
+                                            <i class="fas fa-sync-alt me-1"></i>Actualizar Permisos
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="console.log(notificationManager.getStatus())">
+                                            <i class="fas fa-code me-1"></i>Ver en Consola
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <small class="form-text text-muted d-block mt-2">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    Usa las pruebas para verificar que las notificaciones funcionan correctamente
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button class="btn btn-primary me-2" onclick="loadDashboard(auth.currentUser)">
+                                <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('content').innerHTML = content;
+}
 
 
 
