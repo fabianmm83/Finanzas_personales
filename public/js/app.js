@@ -49,38 +49,50 @@ class NotificationManager {
     }
 
     // Mostrar notificación
-    showNotification(title, options = {}) {
-        if (this.notificationPermission !== 'granted') {
-            console.log('Permisos de notificación no concedidos');
-            return;
-        }
+    // CORREGIDO: Mostrar notificación - versión compatible
+showNotification(title, options = {}) {
+    if (this.notificationPermission !== 'granted') {
+        console.log('Permisos de notificación no concedidos');
+        return;
+    }
 
-        const defaultOptions = {
-            icon: '/static/logo_pwa.png',
-            badge: '/static/logo_pwa.png',
-            tag: 'finances-reminder',
-            requireInteraction: false,
-            silent: false
-        };
+    const defaultOptions = {
+        icon: '/static/logo_pwa.png',
+        badge: '/static/logo_pwa.png',
+        tag: 'finances-reminder',
+        requireInteraction: false,
+        silent: false
+    };
 
-        const notificationOptions = { ...defaultOptions, ...options };
+    const notificationOptions = { ...defaultOptions, ...options };
 
-        // Verificar si es una PWA instalada o navegador
-        if (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
-            // En PWA, usar Service Worker si está disponible
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(title, notificationOptions);
-                });
-            } else {
-                // Fallback a Notification API
-                new Notification(title, notificationOptions);
-            }
-        } else {
-            // En navegador normal
-            new Notification(title, notificationOptions);
+    // VERIFICACIÓN MEJORADA: Remover acciones si no es a través de Service Worker
+    let finalOptions = { ...notificationOptions };
+    
+    // Si NO estamos usando Service Worker y hay acciones, removerlas
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) {
+        if (finalOptions.actions) {
+            console.log('⚠️ Acciones removidas (requieren Service Worker)');
+            delete finalOptions.actions;
         }
     }
+
+    // Verificar si es una PWA instalada o navegador
+    if (navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+        // En PWA, usar Service Worker si está disponible
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, finalOptions);
+            });
+        } else {
+            // Fallback a Notification API sin acciones
+            new Notification(title, finalOptions);
+        }
+    } else {
+        // En navegador normal - sin acciones
+        new Notification(title, finalOptions);
+    }
+}
 
     // Notificación diaria "No olvides agregar tus finanzas"
     scheduleDailyReminder() {
@@ -126,105 +138,135 @@ class NotificationManager {
         }
     }
 
-    showDailyReminder() {
-        this.showNotification('💡 Recordatorio de Finanzas', {
-            body: 'No olvides registrar tus transacciones del día',
-            icon: '/static/logo_pwa.png',
-            badge: '/static/logo_pwa.png',
-            actions: [
-                {
-                    action: 'add-transaction',
-                    title: 'Agregar Transacción'
-                },
-                {
-                    action: 'view-dashboard',
-                    title: 'Ver Dashboard'
-                }
-            ]
-        });
-
-        // También mostrar toast en la app
-        if (typeof showToast === 'function') {
-            showToast('💡 No olvides registrar tus transacciones del día', 'info');
-        }
+    // CORREGIDO: Notificación diaria
+showDailyReminder() {
+    const canUseActions = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+    
+    const reminderOptions = {
+        body: 'No olvides registrar tus transacciones del día',
+        icon: '/static/logo_pwa.png',
+        badge: '/static/logo_pwa.png'
+    };
+    
+    // Solo agregar acciones si están disponibles
+    if (canUseActions) {
+        reminderOptions.actions = [
+            {
+                action: 'add-transaction',
+                title: 'Agregar Transacción'
+            },
+            {
+                action: 'view-dashboard',
+                title: 'Ver Dashboard'
+            }
+        ];
     }
+    
+    this.showNotification('💡 Recordatorio de Finanzas', reminderOptions);
+
+    // También mostrar toast en la app
+    if (typeof showToast === 'function') {
+        showToast('💡 No olvides registrar tus transacciones del día', 'info');
+    }
+}
 
     // Verificar transacciones próximas a vencer
-    async scheduleUpcomingTransactionsCheck() {
-        // CONFIGURACIÓN MEJORADA - Modo prueba/producción
-        const isTestMode = window.location.hostname === 'localhost' || 
-                          window.location.hostname === '127.0.0.1' ||
-                          window.location.search.includes('test=true');
-        
-        if (isTestMode) {
-            console.log("🧪 MODO PRUEBA: Verificación cada 2 minutos");
-            this.upcomingTransactionsCheck = setInterval(async () => {
+    // Verificar transacciones próximas a vencer - VERSIÓN MEJORADA
+async scheduleUpcomingTransactionsCheck() {
+    // CONFIGURACIÓN MEJORADA - Modo prueba/producción
+    const isTestMode = window.location.hostname === 'localhost' || 
+                      window.location.hostname === '127.0.0.1' ||
+                      window.location.search.includes('test=true');
+    
+    // LIMPIAR INTERVALO ANTERIOR SI EXISTE
+    if (this.upcomingTransactionsCheck) {
+        clearInterval(this.upcomingTransactionsCheck);
+    }
+    
+    if (isTestMode) {
+        console.log("🧪 MODO PRUEBA: Verificación cada 2 minutos");
+        this.upcomingTransactionsCheck = setInterval(async () => {
+            // VERIFICAR SI HAY USUARIO ANTES DE EJECUTAR
+            if (auth.currentUser) {
                 await this.checkUpcomingTransactions();
-            }, 120000); // 2 minutos para pruebas
-        } else {
-            // CÓDIGO PRODUCCIÓN
-            // Verificar cada hora
-            this.upcomingTransactionsCheck = setInterval(async () => {
+            }
+        }, 120000); // 2 minutos para pruebas
+    } else {
+        // CÓDIGO PRODUCCIÓN
+        console.log("🚀 MODO PRODUCCIÓN: Verificación cada hora");
+        this.upcomingTransactionsCheck = setInterval(async () => {
+            // VERIFICAR SI HAY USUARIO ANTES DE EJECUTAR
+            if (auth.currentUser) {
                 await this.checkUpcomingTransactions();
-            }, 60 * 60 * 1000); // Cada hora
-        }
-
-        // Verificar inmediatamente al cargar
-        setTimeout(() => this.checkUpcomingTransactions(), 5000);
+            }
+        }, 60 * 60 * 1000); // Cada hora
     }
 
-    // CORREGIDO: Verificación segura de Firebase
-    async checkUpcomingTransactions() {
-        // VERIFICACIÓN SEGURA DE DEPENDENCIAS
-        if (!window.auth || !auth.currentUser || typeof firebase === 'undefined') {
-            console.log('⏳ Firebase/Auth no está listo, reintentando en 10 segundos...');
-            setTimeout(() => this.checkUpcomingTransactions(), 10000);
+    // Verificar inmediatamente al cargar SOLO SI hay usuario
+    if (auth.currentUser) {
+        setTimeout(() => this.checkUpcomingTransactions(), 5000);
+    }
+}
+
+    
+    // CORREGIDO: Verificación segura de Firebase con reintentos inteligentes
+async checkUpcomingTransactions() {
+    // VERIFICACIÓN MÁS ROBUSTA DE DEPENDENCIAS
+    if (typeof firebase === 'undefined' || !firebase.app) {
+        console.log('⏳ Firebase no está inicializado, esperando...');
+        setTimeout(() => this.checkUpcomingTransactions(), 5000);
+        return;
+    }
+
+    if (!window.auth || !auth.currentUser) {
+        console.log('⏳ Usuario no autenticado, no se pueden verificar transacciones');
+        return; // No reintentar si no hay usuario
+    }
+
+    try {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // VERIFICACIÓN SEGURA DE FIRESTORE
+        if (!firebase.firestore) {
+            console.error('❌ Firestore no disponible');
             return;
         }
 
-        try {
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
+        const db = firebase.firestore();
+        const transactionsRef = db.collection('users').doc(auth.currentUser.uid).collection('transactions');
+        
+        const todayStr = today.toISOString().split('T')[0];
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        console.log('🔍 Buscando transacciones entre:', todayStr, 'y', tomorrowStr);
 
-            // VERIFICACIÓN SEGURA DE FIRESTORE
-            if (!firebase.firestore) {
-                console.error('❌ Firestore no disponible');
-                return;
+        const snapshot = await transactionsRef
+            .where('date', '>=', todayStr)
+            .where('date', '<=', tomorrowStr)
+            .get();
+
+        const upcomingTransactions = [];
+        snapshot.forEach(doc => {
+            const transaction = doc.data();
+            transaction.id = doc.id;
+            if (this.isTransactionUpcoming(transaction)) {
+                upcomingTransactions.push(transaction);
             }
+        });
 
-            const db = firebase.firestore();
-            const transactionsRef = db.collection('users').doc(auth.currentUser.uid).collection('transactions');
-            
-            const todayStr = today.toISOString().split('T')[0];
-            const tomorrowStr = tomorrow.toISOString().split('T')[0];
-            
-            console.log('🔍 Buscando transacciones entre:', todayStr, 'y', tomorrowStr);
+        console.log('📅 Transacciones próximas encontradas:', upcomingTransactions.length);
 
-            const snapshot = await transactionsRef
-                .where('date', '>=', todayStr)
-                .where('date', '<=', tomorrowStr)
-                .get();
-
-            const upcomingTransactions = [];
-            snapshot.forEach(doc => {
-                const transaction = doc.data();
-                transaction.id = doc.id;
-                if (this.isTransactionUpcoming(transaction)) {
-                    upcomingTransactions.push(transaction);
-                }
-            });
-
-            console.log('📅 Transacciones próximas encontradas:', upcomingTransactions.length);
-
-            if (upcomingTransactions.length > 0) {
-                this.showUpcomingTransactionsAlert(upcomingTransactions);
-            }
-
-        } catch (error) {
-            console.error('Error verificando transacciones próximas:', error);
+        if (upcomingTransactions.length > 0) {
+            this.showUpcomingTransactionsAlert(upcomingTransactions);
         }
+
+    } catch (error) {
+        console.error('Error verificando transacciones próximas:', error);
+        // No reintentar en caso de error para evitar loops infinitos
     }
+}
 
     isTransactionUpcoming(transaction) {
         const transactionDate = new Date(transaction.date);
@@ -279,11 +321,16 @@ class NotificationManager {
         }
     }
 
-    // Método para reiniciar notificaciones
-    restart() {
-        this.cleanup();
+    // Método para reiniciar notificaciones - VERSIÓN MEJORADA
+restart() {
+    console.log("🔄 Reiniciando NotificationManager...");
+    this.cleanup();
+    
+    // Pequeño delay para asegurar que auth esté listo
+    setTimeout(() => {
         this.init();
-    }
+    }, 1000);
+}
 
     // Limpiar todos los timeouts e intervals
     cleanup() {
@@ -298,33 +345,46 @@ class NotificationManager {
         console.log('🧹 Notificaciones limpiadas');
     }
 
-    // MÉTODO DE PRUEBA - Forzar notificación inmediata
-    testNotification() {
-        console.log("🔔 Probando notificación...");
-        
-        // Probar notificación diaria
-        this.showNotification('🧪 Prueba de Notificación', {
-            body: '¡Las notificaciones están funcionando correctamente!',
-            icon: '/static/logo_pwa.png',
-            badge: '/static/logo_pwa.png',
-            tag: 'test-notification',
-            requireInteraction: true,
-            actions: [
-                {
-                    action: 'add-transaction',
-                    title: 'Agregar Transacción'
-                },
-                {
-                    action: 'view-dashboard',
-                    title: 'Ver Dashboard'
-                }
-            ]
-        });
-        
-        if (typeof showToast === 'function') {
-            showToast('🔔 Notificación de prueba enviada', 'success');
-        }
+    
+    // CORREGIDO: MÉTODO DE PRUEBA - Forzar notificación inmediata
+testNotification() {
+    console.log("🔔 Probando notificación...");
+    
+    // Determinar si podemos usar acciones
+    const canUseActions = 'serviceWorker' in navigator && navigator.serviceWorker.controller;
+    
+    const testOptions = {
+        body: '¡Las notificaciones están funcionando correctamente!',
+        icon: '/static/logo_pwa.png',
+        badge: '/static/logo_pwa.png',
+        tag: 'test-notification',
+        requireInteraction: true
+    };
+    
+    // Solo agregar acciones si están disponibles
+    if (canUseActions) {
+        testOptions.actions = [
+            {
+                action: 'add-transaction',
+                title: 'Agregar Transacción'
+            },
+            {
+                action: 'view-dashboard',
+                title: 'Ver Dashboard'
+            }
+        ];
+        console.log("✅ Probando con acciones (Service Worker disponible)");
+    } else {
+        console.log("ℹ️ Probando sin acciones (Service Worker no disponible)");
     }
+    
+    // Probar notificación diaria
+    this.showNotification('🧪 Prueba de Notificación', testOptions);
+    
+    if (typeof showToast === 'function') {
+        showToast('🔔 Notificación de prueba enviada', 'success');
+    }
+}
 
     // Probar notificación de transacciones próximas
     testUpcomingTransactions() {
@@ -443,7 +503,7 @@ function waitForFirebase() {
     });
 }
 
-// FUNCIÓN PARA INICIALIZAR MANAGERS - NUEVA
+// FUNCIÓN PARA INICIALIZAR MANAGERS - VERSIÓN MEJORADA
 async function initializeManagers() {
     // Inicializar TransactionManager primero
     if (typeof transactionManager === 'undefined') {
@@ -463,17 +523,19 @@ async function initializeManagers() {
         try {
             window.notificationManager = new NotificationManager();
             
-            // Verificar que se inicializó correctamente
+            // VERIFICACIÓN RETARDADA PARA DAR TIEMPO A FIREBASE
             setTimeout(() => {
                 if (notificationManager && notificationManager.getStatus) {
                     const status = notificationManager.getStatus();
+                    console.log("📊 Estado final de NotificationManager:", status);
+                    
                     if (!status.initialized) {
                         console.warn("⚠️ NotificationManager no se inicializó completamente");
                     } else {
                         console.log("✅ NotificationManager completamente operativo");
                     }
                 }
-            }, 2000);
+            }, 3000); // Más tiempo para la verificación
             
         } catch (error) {
             console.error("❌ Error crítico inicializando NotificationManager:", error);
@@ -494,7 +556,7 @@ async function initializeManagers() {
     }
 }
 
-// FUNCIÓN PARA CONFIGURAR AUTH LISTENER - NUEVA
+// FUNCIÓN PARA CONFIGURAR AUTH LISTENER - VERSIÓN MEJORADA
 function setupAuthListener() {
     auth.onAuthStateChanged((user) => {
         console.log("Estado de autenticación:", user ? "Usuario logueado" : "No logueado");
@@ -503,18 +565,19 @@ function setupAuthListener() {
         updateNavbar(user);
         
         if (user) {
+            console.log("👤 Usuario autenticado:", user.email);
             loadDashboard(user);
             
-            // Reiniciar notificaciones de forma segura
+            // Reiniciar notificaciones de forma segura CON MÁS VERIFICACIONES
             if (notificationManager && typeof notificationManager.restart === 'function') {
                 setTimeout(() => {
                     try {
-                        console.log("🔄 Reiniciando notificaciones para usuario...");
+                        console.log("🔄 Reiniciando notificaciones para usuario:", user.email);
                         notificationManager.restart();
                     } catch (error) {
                         console.error("Error reiniciando notificaciones:", error);
                     }
-                }, 1000);
+                }, 2000); // Más delay para asegurar que todo esté listo
             }
         } else {
             loadLoginPage();
@@ -603,6 +666,114 @@ function setupServiceWorkerNotifications() {
         });
     }
 }
+
+
+
+
+
+function showNotificationPanel() {
+    const content = document.getElementById('content');
+    const status = notificationManager ? notificationManager.getStatus() : { error: "NotificationManager no disponible" };
+    
+    content.innerHTML = `
+        <div class="container mt-4">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card shadow">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="mb-0">
+                                <i class="fas fa-bell me-2"></i>Panel de Control - Notificaciones
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <!-- Estado Actual -->
+                            <div class="alert alert-info">
+                                <h5><i class="fas fa-info-circle me-2"></i>Estado Actual</h5>
+                                <pre class="mt-2">${JSON.stringify(status, null, 2)}</pre>
+                            </div>
+                            
+                            <!-- Pruebas Rápidas -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0">Pruebas de Notificación</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <button class="btn btn-success w-100 mb-2" onclick="notificationManager.testNotification()">
+                                                <i class="fas fa-bell me-2"></i>Probar Notificación Simple
+                                            </button>
+                                            <button class="btn btn-warning w-100" onclick="notificationManager.testUpcomingTransactions()">
+                                                <i class="fas fa-clock me-2"></i>Probar Transacciones Próximas
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-warning text-dark">
+                                            <h6 class="mb-0">Gestión</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <button class="btn btn-info w-100 mb-2" onclick="notificationManager.requestPermission()">
+                                                <i class="fas fa-sync-alt me-2"></i>Solicitar Permisos
+                                            </button>
+                                            <button class="btn btn-secondary w-100" onclick="notificationManager.restart()">
+                                                <i class="fas fa-redo me-2"></i>Reiniciar Notificaciones
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Información de Configuración -->
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0">Configuración Actual</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group">
+                                        <li class="list-group-item">
+                                            <strong>Modo Prueba:</strong> 
+                                            <span class="badge ${window.location.hostname === 'localhost' ? 'bg-warning' : 'bg-success'}">
+                                                ${window.location.hostname === 'localhost' ? 'ACTIVO' : 'PRODUCCIÓN'}
+                                            </span>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Recordatorio Diario:</strong> 
+                                            ${window.location.hostname === 'localhost' ? 'Cada 2 minutos' : 'Cada 24 horas (6 PM)'}
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Verificación Transacciones:</strong> 
+                                            ${window.location.hostname === 'localhost' ? 'Cada 2 minutos' : 'Cada 1 hora'}
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Usuario Autenticado:</strong> 
+                                            <span class="badge ${auth.currentUser ? 'bg-success' : 'bg-danger'}">
+                                                ${auth.currentUser ? 'SÍ' : 'NO'}
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 text-center">
+                                <button class="btn btn-primary" onclick="loadDashboard(auth.currentUser)">
+                                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
+
+
+
 
 
 // Configurar navegación
