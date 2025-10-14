@@ -198,17 +198,23 @@
         }
         
         .welcome-logo {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             border-radius: 25px; /* Bordes muy redondeados para el logo de bienvenida */
             margin-bottom: 2rem;
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            background-color: var(--primary-color);
+            background-color: transparent;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: white;
-            font-size: 3rem;
+            overflow: hidden;
+        }
+        
+        .welcome-logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 25px;
         }
         
         .welcome-text {
@@ -314,9 +320,8 @@
             }
             
             .welcome-logo {
-                width: 100px;
-                height: 100px;
-                font-size: 2.5rem;
+                width: 120px;
+                height: 120px;
             }
             
             .welcome-text h1 {
@@ -348,9 +353,8 @@
             }
             
             .welcome-logo {
-                width: 80px;
-                height: 80px;
-                font-size: 2rem;
+                width: 100px;
+                height: 100px;
             }
             
             .welcome-text h1 {
@@ -395,7 +399,7 @@
     <!-- Pantalla de bienvenida -->
     <div class="welcome-screen" id="welcome-screen">
         <div class="welcome-logo">
-            <i class="fas fa-wallet"></i>
+            <img src="/static/logo_pwa.png" alt="Logo Toro Tech" class="welcome-logo-img" id="welcome-logo">
         </div>
         <div class="welcome-text">
             <h1>Toro Tech</h1>
@@ -412,7 +416,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="#" onclick="if(auth && auth.currentUser) { loadDashboard(auth.currentUser); } return false;">
-                <img src="/static/logo_torotech1.webp" alt="Logo ToroTech" class="logo-img" onerror="this.style.display='none'">
+                <img src="/static/logo_pwa.png" alt="Logo ToroTech" class="logo-img" onerror="handleLogoError(this)">
                 <span>Finanzas Personales</span>
             </a>
             
@@ -498,16 +502,30 @@
     
 
     <script>
+        // Función para manejar errores de logo
+        function handleLogoError(imgElement) {
+            console.log('❌ Logo no encontrado:', imgElement.src);
+            imgElement.style.display = 'none';
+            
+            // Crear ícono de respaldo
+            const parent = imgElement.parentElement;
+            const backupIcon = document.createElement('i');
+            backupIcon.className = 'fas fa-wallet';
+            backupIcon.style.fontSize = '1.5rem';
+            backupIcon.style.marginRight = '10px';
+            parent.insertBefore(backupIcon, parent.firstChild);
+        }
+
         // Script para manejar el logo y errores de imagen
         document.addEventListener('DOMContentLoaded', function() {
+            // Manejar logo de la navbar
             const logo = document.querySelector('.logo-img');
             if (logo) {
                 logo.onerror = function() {
-                    console.log('❌ Logo no encontrado en /static/logo_torotech1.webp');
-                    this.style.display = 'none';
+                    handleLogoError(this);
                 };
                 logo.onload = function() {
-                    console.log('✅ Logo cargado correctamente');
+                    console.log('✅ Logo cargado correctamente:', this.src);
                     this.style.display = 'block';
                     this.style.height = '40px';
                     this.style.width = 'auto';
@@ -522,6 +540,23 @@
                 }
             }
             
+            // Manejar logo de bienvenida
+            const welcomeLogo = document.getElementById('welcome-logo');
+            if (welcomeLogo) {
+                welcomeLogo.onerror = function() {
+                    console.log('❌ Logo de bienvenida no encontrado:', this.src);
+                    this.style.display = 'none';
+                    
+                    // Crear ícono de respaldo
+                    const parent = this.parentElement;
+                    parent.innerHTML = '<i class="fas fa-wallet fa-4x" style="color: white;"></i>';
+                };
+                welcomeLogo.onload = function() {
+                    console.log('✅ Logo de bienvenida cargado correctamente');
+                    this.style.display = 'block';
+                };
+            }
+            
             // Verificar que todos los elementos del navbar existen
             const navElements = [
                 'nav-home', 'nav-profile', 'nav-add-transaction', 
@@ -533,7 +568,7 @@
                 console.log(`Nav element ${id}:`, element ? '✅' : '❌');
             });
             
-            // Mostrar pantalla de bienvenida por 3 segundos
+            // Mostrar pantalla de bienvenida por 2 segundos
             setTimeout(function() {
                 const welcomeScreen = document.getElementById('welcome-screen');
                 if (welcomeScreen) {
@@ -542,7 +577,7 @@
                         welcomeScreen.style.display = 'none';
                     }, 500);
                 }
-            }, 3000);
+            }, 2000); // Cambiado de 3000 a 2000 ms (2 segundos)
         });
 
         // Función para manejar logos en páginas de login/registro
