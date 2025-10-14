@@ -1043,42 +1043,46 @@ function setupNavigation() {
 }
 
     if (navProfile) {
-        navProfile.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('👤 Navegando a Perfil - CLICK CONFIRMADO');
-            const currentUser = window.auth?.currentUser;
-            if (currentUser) {
-                console.log('✅ Usuario autenticado, cargando perfil...');
-                showProfile();
-            } else {
-                console.log('⚠️ Usuario no autenticado, cargando login...');
-                loadLoginPage();
-            }
-        });
-    }
+    navProfile.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('👤 Navegando a Perfil - CLICK CONFIRMADO');
+        
+        // CORRECCIÓN: Usar firebase.auth() directamente para consistencia
+        const currentUser = firebase.auth().currentUser;
+        if (currentUser) {
+            console.log('✅ Usuario autenticado, cargando perfil...');
+            showProfile();
+        } else {
+            console.log('⚠️ Usuario no autenticado, cargando login...');
+            loadLoginPage();
+        }
+    });
+}
 
-    if (navAddTransaction) {
-        navAddTransaction.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('➕ Navegando a Agregar Transacción - CLICK CONFIRMADO');
-            const currentUser = window.auth?.currentUser;
-            if (currentUser) {
-                console.log('✅ Usuario autenticado, cargando formulario...');
-                showAddTransaction();
-            } else {
-                console.log('⚠️ Usuario no autenticado, cargando login...');
-                loadLoginPage();
-            }
-        });
-    }
+if (navAddTransaction) {
+    navAddTransaction.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('➕ Navegando a Agregar Transacción - CLICK CONFIRMADO');
+        
+        // CORRECCIÓN: Usar firebase.auth() directamente para consistencia
+        const currentUser = firebase.auth().currentUser;
+        if (currentUser) {
+            console.log('✅ Usuario autenticado, cargando formulario...');
+            showAddTransaction();
+        } else {
+            console.log('⚠️ Usuario no autenticado, cargando login...');
+            loadLoginPage();
+        }
+    });
+}
 
-    if (navLogout) {
-        navLogout.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('🚪 Cerrando sesión - CLICK CONFIRMADO');
-            logout();
-        });
-    }
+if (navLogout) {
+    navLogout.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('🚪 Cerrando sesión - CLICK CONFIRMADO');
+        logout();
+    });
+}
 
     if (navLogin) {
         navLogin.addEventListener('click', (e) => {
@@ -3631,10 +3635,15 @@ async function loginWithGoogle() {
 
 async function logout() {
     try {
-        const authInstance = window.auth || auth;
-        await authInstance.signOut();
+        // CORRECCIÓN: Usar firebase.auth() directamente
+        await firebase.auth().signOut();
         console.log('✅ Usuario cerró sesión');
         showToast('Sesión cerrada', 'info');
+        
+        // Limpiar cualquier referencia a window.auth
+        if (window.auth) {
+            delete window.auth;
+        }
     } catch (error) {
         console.error('❌ Error al cerrar sesión:', error);
         showToast('Error al cerrar sesión', 'danger');
