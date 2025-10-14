@@ -1026,19 +1026,21 @@ function setupNavigation() {
     });
 
     if (navHome) {
-        navHome.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('🏠 Navegando a Home - CLICK CONFIRMADO');
-            const currentUser = window.auth?.currentUser;
-            if (currentUser) {
-                console.log('✅ Usuario autenticado, cargando dashboard...');
-                loadDashboard(currentUser);
-            } else {
-                console.log('⚠️ Usuario no autenticado, cargando login...');
-                loadLoginPage();
-            }
-        });
-    }
+    navHome.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('🏠 Navegando a Home - CLICK CONFIRMADO');
+        
+        // CORRECCIÓN: Usar firebase.auth() directamente
+        const currentUser = firebase.auth().currentUser;
+        if (currentUser) {
+            console.log('✅ Usuario autenticado, cargando dashboard...');
+            loadDashboard(currentUser);
+        } else {
+            console.log('⚠️ Usuario no autenticado, cargando login...');
+            loadLoginPage();
+        }
+    });
+}
 
     if (navProfile) {
         navProfile.addEventListener('click', (e) => {
@@ -1266,19 +1268,16 @@ function handleLoginLogo() {
 }
 
 function loadDashboard(user) {
-    console.log('🚀 INICIANDO loadDashboard...', { 
+    console.log('🚀 INICIANDO loadDashboard CORREGIDA...', { 
         user: user ? user.email : 'null',
-        authUser: window.auth?.currentUser?.email 
+        authUser: window.auth?.currentUser?.email,
+        firebaseUser: firebase.auth().currentUser?.email
     });
     
-    // Si no se pasa usuario, usar el de auth
-    if (!user && window.auth?.currentUser) {
-        user = window.auth.currentUser;
-        console.log('✅ Usando usuario de auth:', user.email);
-    }
+    // CORRECCIÓN: Usar siempre firebase.auth() directamente para evitar conflictos
+    const currentUser = user || firebase.auth().currentUser;
     
-    // Si todavía no hay usuario, mostrar login
-    if (!user) {
+    if (!currentUser) {
         console.error('❌ No hay usuario para cargar dashboard');
         loadLoginPage();
         return;
@@ -1290,13 +1289,13 @@ function loadDashboard(user) {
         return;
     }
 
-    console.log('✅ Cargando dashboard para:', user.email);
+    console.log('✅ Cargando dashboard para:', currentUser.email);
     
-    // Resto del código de loadDashboard (tu HTML del dashboard)
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
     
+    // HTML COMPLETO del dashboard - ASEGURAR que todos los elementos existan
     content.innerHTML = `
         <div class="container mt-4">
             <!-- Título y fecha -->
@@ -1312,7 +1311,12 @@ function loadDashboard(user) {
 
             <!-- Resumen Financiero -->
             <div class="row mb-4" id="financial-summary">
-                <!-- Se llenará dinámicamente -->
+                <div class="col-12 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando resumen...</span>
+                    </div>
+                    <p>Cargando resumen financiero...</p>
+                </div>
             </div>
 
             <!-- Botones principales -->
@@ -1332,20 +1336,114 @@ function loadDashboard(user) {
                 </div>
             </div>
 
-            <!-- Aquí continúa el resto de tu HTML del dashboard -->
-            <div class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando dashboard...</span>
+            <!-- Gráfico de Evolución Temporal -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h2 class="card-title mb-4">Evolución de Ingresos y Gastos</h2>
+                            <div class="chart-container">
+                                <canvas id="timelineChart" height="120"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <p class="mt-2">Cargando datos del dashboard...</p>
+            </div>
+
+            <!-- Sección de transacciones -->
+            <div id="transactions-section">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-list me-2"></i>Transacciones Recientes
+                        </h5>
+                        <div id="transactions-list">
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Cargando transacciones...</span>
+                                </div>
+                                <p class="mt-2">Cargando transacciones...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos de Categorías -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h2 class="text-center card-title">Distribución de Ingresos</h2>
+                            <div class="chart-container">
+                                <canvas id="incomeChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h2 class="text-center card-title">Distribución de Gastos</h2>
+                            <div class="chart-container">
+                                <canvas id="expenseChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros Avanzados -->
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-filter me-2"></i>Filtros Avanzados</h5>
+                            <form id="filters-form" class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="category" class="form-label">Categoría</label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="">Todas las categorías</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="amount_min" class="form-label">Mínimo ($)</label>
+                                    <input type="number" class="form-control" id="amount_min" name="amount_min" 
+                                           step="0.01" min="0" placeholder="Mínimo">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="amount_max" class="form-label">Máximo ($)</label>
+                                    <input type="number" class="form-control" id="amount_max" name="amount_max" 
+                                           step="0.01" min="0" placeholder="Máximo">
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary me-2 w-100">
+                                        <i class="fas fa-search"></i> Filtrar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 
-    // Cargar datos después de un pequeño delay para asegurar que el DOM esté listo
+    // Configurar event listeners después de renderizar
     setTimeout(() => {
-        loadDashboardData(currentYear, currentMonth, currentTimeframe);
+        const filtersForm = document.getElementById('filters-form');
+        if (filtersForm) {
+            filtersForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                applyFilters();
+            });
+        }
+
+        console.log('✅ Dashboard HTML renderizado, cargando datos...');
     }, 100);
+
+    // Cargar datos del dashboard
+    loadDashboardData(currentYear, currentMonth, currentTimeframe);
 }
 
 // FUNCIÓN MEJORADA: Cargar datos del dashboard con selector de vista temporal
