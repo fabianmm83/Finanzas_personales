@@ -1,5 +1,5 @@
-// sw.js - Service Worker para Finanzas Personales con Notificaciones
-const CACHE_NAME = 'finanzas-v1.1';
+// sw.js - Service Worker para Finanzas Personales con Notificaciones y Actualizaciones
+const CACHE_NAME = 'finanzas-v1.3';
 
 // Archivos para cache
 const STATIC_CACHE_FILES = [
@@ -36,7 +36,18 @@ self.addEventListener('activate', (event) => {
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => {
+            // Notificar a los clientes que hay una nueva versión disponible
+            self.clients.matchAll().then(clients => {
+                clients.forEach(client => {
+                    client.postMessage({
+                        type: 'NEW_VERSION_AVAILABLE',
+                        version: CACHE_NAME
+                    });
+                });
+            });
+            return self.clients.claim();
+        })
     );
 });
 
@@ -194,6 +205,23 @@ self.addEventListener('message', function(event) {
     const { type, data } = event.data;
     
     if (type === 'SKIP_WAITING') {
-        self.skipWaiting();
+        console.log('🔄 Saltando espera de Service Worker...');
+        self.skipWaiting().then(() => {
+            // Notificar a todos los clientes que se actualizó
+            self.clients.matchAll().then(clients => {
+                clients.forEach(client => {
+                    client.postMessage({
+                        type: 'SERVICE_WORKER_UPDATED'
+                    });
+                });
+            });
+        });
+    }
+    
+    // Escuchar solicitudes de verificación de actualizaciones
+    if (type === 'CHECK_FOR_UPDATES') {
+        self.registration.update().then(() => {
+            console.log('✅ Verificación de actualizaciones completada');
+        });
     }
 });

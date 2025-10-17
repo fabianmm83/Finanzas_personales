@@ -42,67 +42,64 @@
 
         /* Modo oscuro */
         @media (prefers-color-scheme: dark) {
-    :root {
-        --bg-color: #121212;
-        --text-color: #e0e0e0;
-        --card-bg: #1e1e1e;
-        --footer-bg: #000000;
-        --footer-text: #e0e0e0;
-        --navbar-bg: linear-gradient(135deg, #121212, #2c2c2c);
-        --card-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
-    
-    .card {
-        border: 1px solid #333;
-    }
-    
-    .form-control, .form-select {
-        background-color: #2d2d2d;
-        border-color: #444;
-        color: #e0e0e0;
-    }
-    
-    .form-control:focus, .form-select:focus {
-        background-color: #2d2d2d;
-        border-color: var(--primary-color);
-        color: #e0e0e0;
-    }
-    
-    .table {
-        --bs-table-bg: var(--card-bg);
-        --bs-table-color: #ffffff; /* Cambiado a blanco para mejor contraste */
-        --bs-table-border-color: #444;
-    }
-    
-    /* Asegurar que todas las tablas tengan texto blanco */
-    .table th, .table td {
-        color: #ffffff !important;
-    }
-    
-    /* Fechas en dashboard */
-    .text-muted {
-        color: #e0e0e0 !important; /* Cambiar gris oscuro por gris claro */
-    }
-    
-    /* Texto en cards */
-    .card, .card-body, .card-title, .card-text {
-        color: #e0e0e0;
-    }
-}
+            :root {
+                --bg-color: #121212;
+                --text-color: #e0e0e0;
+                --card-bg: #1e1e1e;
+                --footer-bg: #000000;
+                --footer-text: #e0e0e0;
+                --navbar-bg: linear-gradient(135deg, #121212, #2c2c2c);
+                --card-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            }
+            
+            .card {
+                border: 1px solid #333;
+            }
+            
+            .form-control, .form-select {
+                background-color: #2d2d2d;
+                border-color: #444;
+                color: #e0e0e0;
+            }
+            
+            .form-control:focus, .form-select:focus {
+                background-color: #2d2d2d;
+                border-color: var(--primary-color);
+                color: #e0e0e0;
+            }
+            
+            .table {
+                --bs-table-bg: var(--card-bg);
+                --bs-table-color: #ffffff;
+                --bs-table-border-color: #444;
+            }
+            
+            .table th, .table td {
+                color: #ffffff !important;
+            }
+            
+            .text-muted {
+                color: #e0e0e0 !important;
+            }
+            
+            .card, .card-body, .card-title, .card-text {
+                color: #e0e0e0;
+            }
+        }
 
-/* Estilos para las gráficas en modo oscuro */
-@media (prefers-color-scheme: dark) {
-    .chart-container canvas {
-        filter: brightness(0.9) contrast(1.1);
-    }
-}
+        /* Estilos para las gráficas en modo oscuro */
+        @media (prefers-color-scheme: dark) {
+            .chart-container canvas {
+                filter: brightness(0.9) contrast(1.1);
+            }
+        }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
-            padding-top: 80px; /* Para la navbar fija */
+            padding-top: 80px;
             transition: background-color 0.3s, color 0.3s;
         }
         
@@ -129,7 +126,7 @@
             width: auto;
             margin-right: 10px;
             object-fit: contain;
-            border-radius: 10px; /* Bordes redondeados para el logo */
+            border-radius: 10px;
         }
         
         .card {
@@ -166,7 +163,6 @@
             z-index: 9999;
         }
 
-        /* Estilos para los selectores de tipo de gráfica */
         .chart-type-selector {
             margin-bottom: 1rem;
         }
@@ -180,30 +176,27 @@
             font-size: 0.8rem;
         }
 
-        /* Mejorar la apariencia de las gráficas */
         .chart-container {
             position: relative;
             height: 300px;
             width: 100%;
         }
 
-        /* Asegurar que las gráficas sean responsivas */
         canvas {
             max-width: 100%;
             height: auto !important;
         }
 
-        /* Logo en login - CENTRADO */
         .login-logo {
             height: 80px;
             width: auto;
-            margin: 0 auto 1rem auto; /* Centrado */
-            display: block; /* Para que funcione margin auto */
+            margin: 0 auto 1rem auto;
+            display: block;
             object-fit: contain;
-            border-radius: 15px; /* Bordes más redondeados para el logo de login */
+            border-radius: 15px;
         }
         
-        /* Pantalla de bienvenida */
+        /* Pantalla de bienvenida actualizada */
         .welcome-screen {
             position: fixed;
             top: 0;
@@ -222,7 +215,7 @@
         .welcome-logo {
             width: 150px;
             height: 150px;
-            border-radius: 25px; /* Bordes muy redondeados para el logo de bienvenida */
+            border-radius: 25px;
             margin-bottom: 2rem;
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             background-color: transparent;
@@ -242,7 +235,7 @@
         .welcome-text {
             color: white;
             text-align: center;
-            margin-top: 2rem;
+            margin-bottom: 2rem;
         }
         
         .welcome-text h1 {
@@ -257,43 +250,152 @@
             opacity: 0.9;
         }
         
-        .loading-dots {
-            display: flex;
-            margin-top: 2rem;
+        /* Estilos para el loader electrónico */
+        .electronic-loader {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
         }
         
-        .loading-dots span {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: white;
-            margin: 0 5px;
-            animation: loading 1.4s infinite ease-in-out;
+        .trace-bg {
+            stroke: #333;
+            stroke-width: 1.8;
+            fill: none;
         }
         
-        .loading-dots span:nth-child(1) {
-            animation-delay: -0.32s;
+        .trace-flow {
+            stroke-width: 1.8;
+            fill: none;
+            stroke-dasharray: 40 400;
+            stroke-dashoffset: 438;
+            filter: drop-shadow(0 0 6px currentColor);
+            animation: flow 3s cubic-bezier(0.5, 0, 0.9, 1) infinite;
         }
         
-        .loading-dots span:nth-child(2) {
-            animation-delay: -0.16s;
+        .yellow {
+            stroke: #ffea00;
+            color: #ffea00;
+        }
+        .blue {
+            stroke: #00ccff;
+            color: #00ccff;
+        }
+        .green {
+            stroke: #00ff15;
+            color: #00ff15;
+        }
+        .purple {
+            stroke: #9900ff;
+            color: #9900ff;
+        }
+        .red {
+            stroke: #ff3300;
+            color: #ff3300;
         }
         
-        @keyframes loading {
-            0%, 80%, 100% {
-                transform: scale(0.8);
-                opacity: 0.5;
+        @keyframes flow {
+            to {
+                stroke-dashoffset: 0;
             }
-            40% {
-                transform: scale(1);
+        }
+
+        /* Banner de actualización */
+        .update-banner {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px 20px;
+            z-index: 1020;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .update-banner.dark {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
                 opacity: 1;
             }
         }
+
+        .update-banner-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .update-banner-text {
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .update-banner-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+            font-size: 1rem;
+        }
+
+        .update-banner-message {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .update-banner-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .update-banner-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .update-banner-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .update-banner-btn-primary {
+            background: rgba(255,255,255,0.9);
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .update-banner-btn-primary:hover {
+            background: white;
+        }
+
+        /* Ajuste del body cuando hay banner de actualización */
+        body.has-update-banner {
+            padding-top: 130px;
+        }
         
-        /* Navbar en móviles - botones en línea */
+        /* Estilos responsivos */
         @media (max-width: 768px) {
             body {
                 padding-top: 70px;
+            }
+            
+            body.has-update-banner {
+                padding-top: 120px;
             }
             
             .navbar-nav {
@@ -349,9 +451,31 @@
             .welcome-text h1 {
                 font-size: 2rem;
             }
+            
+            .electronic-loader {
+                max-width: 300px;
+            }
+
+            .update-banner {
+                top: 70px;
+                padding: 10px 15px;
+            }
+
+            .update-banner-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .update-banner-text {
+                margin-right: 0;
+            }
+
+            .update-banner-actions {
+                align-self: flex-end;
+            }
         }
         
-        /* Logo más pequeño en móviles muy pequeños */
         @media (max-width: 576px) {
             .navbar-brand span {
                 display: none;
@@ -382,9 +506,17 @@
             .welcome-text h1 {
                 font-size: 1.8rem;
             }
+            
+            .electronic-loader {
+                max-width: 250px;
+            }
+
+            .update-banner-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
         }
         
-        /* Mejoras para móviles */
         .table-responsive {
             font-size: 0.9rem;
         }
@@ -393,18 +525,15 @@
             padding: 1rem;
         }
         
-        /* Asegurar que los inputs sean legibles en móviles */
         .form-control, .form-select {
-            font-size: 16px; /* Previene zoom en iOS */
+            font-size: 16px;
         }
         
-        /* Estilos para el contenido principal */
         .container {
             padding-left: 15px;
             padding-right: 15px;
         }
         
-        /* Mejorar la visibilidad de los botones en móviles */
         .btn {
             font-size: 0.9rem;
             padding: 6px 12px;
@@ -418,7 +547,29 @@
 
 </head>
 <body>
-    <!-- Pantalla de bienvenida -->
+    <!-- Banner de actualización -->
+    <div class="update-banner" id="update-banner">
+        <div class="update-banner-content">
+            <div class="update-banner-text">
+                <div class="update-banner-title">
+                    <i class="fas fa-sync-alt me-2"></i>Nueva versión disponible
+                </div>
+                <div class="update-banner-message">
+                    Hay una actualización de la aplicación. Actualiza para obtener las últimas mejoras.
+                </div>
+            </div>
+            <div class="update-banner-actions">
+                <button class="update-banner-btn" id="update-later-btn">
+                    Más tarde
+                </button>
+                <button class="update-banner-btn update-banner-btn-primary" id="update-now-btn">
+                    Actualizar ahora
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pantalla de bienvenida actualizada -->
     <div class="welcome-screen" id="welcome-screen">
         <div class="welcome-logo">
             <img src="/static/logo_pwa.png" alt="Logo Toro Tech" class="welcome-logo-img" id="welcome-logo">
@@ -426,11 +577,160 @@
         <div class="welcome-text">
             <h1>Toro Tech</h1>
             <p>Finanzas Personales</p>
-            <div class="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
+        </div>
+        
+        <!-- Loader electrónico -->
+        <div class="electronic-loader">
+            <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="chipGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#2d2d2d"></stop>
+                        <stop offset="100%" stop-color="#0f0f0f"></stop>
+                    </linearGradient>
+
+                    <linearGradient id="textGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#eeeeee"></stop>
+                        <stop offset="100%" stop-color="#888888"></stop>
+                    </linearGradient>
+
+                    <linearGradient id="pinGradient" x1="1" y1="0" x2="0" y2="0">
+                        <stop offset="0%" stop-color="#bbbbbb"></stop>
+                        <stop offset="50%" stop-color="#888888"></stop>
+                        <stop offset="100%" stop-color="#555555"></stop>
+                    </linearGradient>
+                </defs>
+
+                <g id="traces">
+                    <path d="M100 100 H200 V210 H326" class="trace-bg"></path>
+                    <path d="M100 100 H200 V210 H326" class="trace-flow purple"></path>
+
+                    <path d="M80 180 H180 V230 H326" class="trace-bg"></path>
+                    <path d="M80 180 H180 V230 H326" class="trace-flow blue"></path>
+
+                    <path d="M60 260 H150 V250 H326" class="trace-bg"></path>
+                    <path d="M60 260 H150 V250 H326" class="trace-flow yellow"></path>
+
+                    <path d="M100 350 H200 V270 H326" class="trace-bg"></path>
+                    <path d="M100 350 H200 V270 H326" class="trace-flow green"></path>
+
+                    <path d="M700 90 H560 V210 H474" class="trace-bg"></path>
+                    <path d="M700 90 H560 V210 H474" class="trace-flow blue"></path>
+
+                    <path d="M740 160 H580 V230 H474" class="trace-bg"></path>
+                    <path d="M740 160 H580 V230 H474" class="trace-flow green"></path>
+
+                    <path d="M720 250 H590 V250 H474" class="trace-bg"></path>
+                    <path d="M720 250 H590 V250 H474" class="trace-flow red"></path>
+
+                    <path d="M680 340 H570 V270 H474" class="trace-bg"></path>
+                    <path d="M680 340 H570 V270 H474" class="trace-flow yellow"></path>
+                </g>
+
+                <rect
+                    x="330"
+                    y="190"
+                    width="140"
+                    height="100"
+                    rx="20"
+                    ry="20"
+                    fill="url(#chipGradient)"
+                    stroke="#222"
+                    stroke-width="3"
+                    filter="drop-shadow(0 0 6px rgba(0,0,0,0.8))"
+                ></rect>
+
+                <g>
+                    <rect
+                        x="322"
+                        y="205"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                    <rect
+                        x="322"
+                        y="225"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                    <rect
+                        x="322"
+                        y="245"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                    <rect
+                        x="322"
+                        y="265"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                </g>
+
+                <g>
+                    <rect
+                        x="470"
+                        y="205"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                    <rect
+                        x="470"
+                        y="225"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                    <rect
+                        x="470"
+                        y="245"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                    <rect
+                        x="470"
+                        y="265"
+                        width="8"
+                        height="10"
+                        fill="url(#pinGradient)"
+                        rx="2"
+                    ></rect>
+                </g>
+
+                <text
+                    x="400"
+                    y="240"
+                    font-family="Arial, sans-serif"
+                    font-size="22"
+                    fill="url(#textGradient)"
+                    text-anchor="middle"
+                    alignment-baseline="middle"
+                >
+                    Loading
+                </text>
+
+                <circle cx="100" cy="100" r="5" fill="black"></circle>
+                <circle cx="80" cy="180" r="5" fill="black"></circle>
+                <circle cx="60" cy="260" r="5" fill="black"></circle>
+                <circle cx="100" cy="350" r="5" fill="black"></circle>
+
+                <circle cx="700" cy="90" r="5" fill="black"></circle>
+                <circle cx="740" cy="160" r="5" fill="black"></circle>
+                <circle cx="720" cy="250" r="5" fill="black"></circle>
+                <circle cx="680" cy="340" r="5" fill="black"></circle>
+            </svg>
         </div>
     </div>
     
@@ -466,10 +766,10 @@
                         </a>
                     </li>
                     <li class="nav-item">
-    <a class="nav-link" href="#" id="nav-logout">
-        <i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>
-    </a>
-</li>
+                        <a class="nav-link" href="#" id="nav-logout">
+                            <i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span>
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" id="nav-login" style="display: none;">
                             <i class="fas fa-sign-in-alt"></i> <span>Iniciar Sesión</span>
@@ -524,22 +824,116 @@
     
 
     <script>
-        // Función para manejar errores de logo
-        function handleLogoError(imgElement) {
-            console.log('❌ Logo no encontrado:', imgElement.src);
-            imgElement.style.display = 'none';
+        // ========== GESTIÓN DE ACTUALIZACIONES PWA ==========
+        
+        // Variable para controlar si hay una actualización pendiente
+        let waitingServiceWorker = null;
+        let updateBannerShown = false;
+
+        // Función para mostrar el banner de actualización
+        function showUpdateBanner() {
+            if (updateBannerShown) return;
             
-            // Crear ícono de respaldo
-            const parent = imgElement.parentElement;
-            const backupIcon = document.createElement('i');
-            backupIcon.className = 'fas fa-wallet';
-            backupIcon.style.fontSize = '1.5rem';
-            backupIcon.style.marginRight = '10px';
-            parent.insertBefore(backupIcon, parent.firstChild);
+            const updateBanner = document.getElementById('update-banner');
+            if (!updateBanner) return;
+            
+            // Aplicar tema oscuro si es necesario
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                updateBanner.classList.add('dark');
+            }
+            
+            updateBanner.style.display = 'block';
+            document.body.classList.add('has-update-banner');
+            updateBannerShown = true;
+            
+            console.log('🔄 Banner de actualización mostrado');
         }
 
-        // Script para manejar el logo y errores de imagen
+        // Función para ocultar el banner de actualización
+        function hideUpdateBanner() {
+            const updateBanner = document.getElementById('update-banner');
+            if (updateBanner) {
+                updateBanner.style.display = 'none';
+                document.body.classList.remove('has-update-banner');
+            }
+            updateBannerShown = false;
+        }
+
+        // Función para actualizar la aplicación
+        function updateApp() {
+            if (waitingServiceWorker) {
+                waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+                hideUpdateBanner();
+                showToast('Actualizando aplicación...', 'info');
+                
+                // Recargar la página después de un breve delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        }
+
+        // Configurar el Service Worker para detectar actualizaciones
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado:', registration);
+                        
+                        // Detectar cuando hay una actualización disponible
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            if (newWorker) {
+                                newWorker.addEventListener('statechange', () => {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        // Hay una nueva versión disponible
+                                        waitingServiceWorker = newWorker;
+                                        showUpdateBanner();
+                                    }
+                                });
+                            }
+                        });
+                    })
+                    .catch(error => {
+                        console.log('❌ Error registrando Service Worker:', error);
+                    });
+
+                // Escuchar mensajes del Service Worker
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
+                        showUpdateBanner();
+                    }
+                });
+
+                // Verificar si hay actualizaciones periódicamente
+                setInterval(() => {
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.ready.then(registration => {
+                            registration.update();
+                        });
+                    }
+                }, 60 * 60 * 1000); // Cada hora
+            }
+        }
+
+        // ========== CONFIGURACIÓN INICIAL ==========
+        
         document.addEventListener('DOMContentLoaded', function() {
+            // Registrar Service Worker para actualizaciones
+            registerServiceWorker();
+            
+            // Configurar botones del banner de actualización
+            const updateNowBtn = document.getElementById('update-now-btn');
+            const updateLaterBtn = document.getElementById('update-later-btn');
+            
+            if (updateNowBtn) {
+                updateNowBtn.addEventListener('click', updateApp);
+            }
+            
+            if (updateLaterBtn) {
+                updateLaterBtn.addEventListener('click', hideUpdateBanner);
+            }
+            
             // Manejar logo de la navbar
             const logo = document.querySelector('.logo-img');
             if (logo) {
@@ -556,7 +950,6 @@
                     this.style.borderRadius = '10px';
                 };
                 
-                // Forzar la carga si es necesario
                 if (logo.complete) {
                     logo.onload();
                 }
@@ -569,7 +962,6 @@
                     console.log('❌ Logo de bienvenida no encontrado:', this.src);
                     this.style.display = 'none';
                     
-                    // Crear ícono de respaldo
                     const parent = this.parentElement;
                     parent.innerHTML = '<i class="fas fa-wallet fa-4x" style="color: white;"></i>';
                 };
@@ -578,17 +970,6 @@
                     this.style.display = 'block';
                 };
             }
-            
-            // Verificar que todos los elementos del navbar existen
-            const navElements = [
-                'nav-home', 'nav-profile', 'nav-add-transaction', 
-                'nav-logout', 'nav-login'
-            ];
-            
-            navElements.forEach(id => {
-                const element = document.getElementById(id);
-                console.log(`Nav element ${id}:`, element ? '✅' : '❌');
-            });
             
             // Mostrar pantalla de bienvenida por 2 segundos
             setTimeout(function() {
@@ -599,8 +980,21 @@
                         welcomeScreen.style.display = 'none';
                     }, 500);
                 }
-            }, 2000); // Cambiado de 3000 a 2000 ms (2 segundos)
+            }, 2000);
         });
+
+        // Función para manejar errores de logo
+        function handleLogoError(imgElement) {
+            console.log('❌ Logo no encontrado:', imgElement.src);
+            imgElement.style.display = 'none';
+            
+            const parent = imgElement.parentElement;
+            const backupIcon = document.createElement('i');
+            backupIcon.className = 'fas fa-wallet';
+            backupIcon.style.fontSize = '1.5rem';
+            backupIcon.style.marginRight = '10px';
+            parent.insertBefore(backupIcon, parent.firstChild);
+        }
 
         // Función para manejar logos en páginas de login/registro
         function handleLoginLogo() {
@@ -609,7 +1003,6 @@
                 logo.onerror = function() {
                     console.log('❌ Logo no encontrado para login');
                     this.style.display = 'none';
-                    // Mostrar ícono de respaldo
                     const parent = this.parentElement;
                     const backupIcon = document.createElement('i');
                     backupIcon.className = 'fas fa-wallet fa-3x text-primary mb-3';
@@ -623,7 +1016,7 @@
             });
         }
 
-        // Ejecutar cuando el contenido cambie (para páginas dinámicas)
+        // Observador para cambios en el contenido
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'childList') {
@@ -637,46 +1030,24 @@
             subtree: true
         });
 
-        // ========== PWA Y MANEJO DEL BANNER ==========
+        // ========== INSTALACIÓN PWA ==========
         
-        // PWA - Registrar Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                        console.log('✅ ServiceWorker registrado: ', registration.scope);
-                    })
-                    .catch(function(error) {
-                        console.log('❌ Error ServiceWorker: ', error);
-                    });
-            });
-        }
-
-        // Variables para el manejo del banner PWA
         let deferredPrompt;
 
-        // Detectar cuando la PWA puede instalarse
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('✅ PWA puede instalarse');
             e.preventDefault();
             deferredPrompt = e;
-            
-            // Mostrar botón de instalación después de 3 segundos
             setTimeout(showInstallButton, 3000);
         });
 
-        // Detectar cuando la PWA se instala
         window.addEventListener('appinstalled', () => {
             console.log('🎉 PWA instalada correctamente');
             showToast('¡App instalada correctamente!', 'success');
-            
-            // Ocultar el botón si existe
             hideInstallButton();
         });
 
-        // Función para mostrar el botón de instalación
         function showInstallButton() {
-            // Verificar si ya existe el botón o si ya se instaló
             if (document.getElementById('install-pwa-btn') || !deferredPrompt) {
                 return;
             }
@@ -693,11 +1064,9 @@
             installBtn.onclick = installPWA;
             
             document.body.appendChild(installBtn);
-            
             console.log('📱 Botón de instalación mostrado');
         }
 
-        // Función para ocultar el botón de instalación
         function hideInstallButton() {
             const installBtn = document.getElementById('install-pwa-btn');
             if (installBtn) {
@@ -706,22 +1075,13 @@
             }
         }
 
-        // Función para instalar la PWA
         async function installPWA() {
             if (deferredPrompt) {
                 console.log('📱 Iniciando instalación PWA...');
-                
-                // Mostrar el prompt de instalación
                 deferredPrompt.prompt();
-                
-                // Esperar la respuesta del usuario
                 const { outcome } = await deferredPrompt.userChoice;
                 console.log(`📱 Usuario eligió: ${outcome}`);
-                
-                // Limpiar la referencia
                 deferredPrompt = null;
-                
-                // Ocultar el botón independientemente del resultado
                 hideInstallButton();
                 
                 if (outcome === 'accepted') {
@@ -730,7 +1090,13 @@
             }
         }
 
-        // Verificar si el ícono PWA se carga correctamente
+        // Función auxiliar para mostrar toasts
+        function showToast(message, type = 'info') {
+            // Implementación básica de toast - puedes mejorarla según tus necesidades
+            console.log(`Toast [${type}]: ${message}`);
+        }
+
+        // Verificar ícono PWA
         function checkPWAIcon() {
             const icon = new Image();
             icon.src = '/static/logo_pwa.png';
@@ -742,11 +1108,7 @@
             };
         }
 
-        // Verificar ícono al cargar
         window.addEventListener('load', checkPWAIcon);
-        
-        // Función auxiliar para mostrar toasts (si no existe)
-        
-        </script>
+    </script>
 </body>
 </html>
