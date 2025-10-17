@@ -1300,18 +1300,24 @@ function loadDashboard(user) {
                 </div>
             </div>
 
-            <!-- Botones principales -->
+            <!-- Botones principales con nuevo estilo -->
             <div class="row justify-content-center mb-4">
                 <div class="col-md-12">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <button class="btn btn-primary" onclick="showAddBudget()">
-                            <i class="fas fa-plus-circle me-2"></i>Agregar Presupuesto
+                        <button class="btn-custom btn-primary-custom" onclick="showAddBudget()">
+                            <span>
+                                <i class="fas fa-plus-circle me-2"></i>Agregar Presupuesto
+                            </span>
                         </button>
-                        <button class="btn btn-info" onclick="showBudgetsPage()">
-                            <i class="fas fa-chart-pie me-2"></i>Ver Mis Presupuestos
+                        <button class="btn-custom btn-info-custom" onclick="showBudgetsPage()">
+                            <span>
+                                <i class="fas fa-chart-pie me-2"></i>Ver Mis Presupuestos
+                            </span>
                         </button>
-                        <button class="btn btn-success" onclick="showAddTransaction()">
-                            <i class="fas fa-plus me-2"></i>Nueva Transacción
+                        <button class="btn-custom btn-success-custom" onclick="showAddTransaction()">
+                            <span>
+                                <i class="fas fa-plus me-2"></i>Nueva Transacción
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -1398,8 +1404,10 @@ function loadDashboard(user) {
                                            step="0.01" min="0" placeholder="Máximo">
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-primary me-2 w-100">
-                                        <i class="fas fa-search"></i> Filtrar
+                                    <button type="submit" class="btn-custom btn-primary-custom w-100">
+                                        <span>
+                                            <i class="fas fa-search me-2"></i>Filtrar
+                                        </span>
                                     </button>
                                 </div>
                             </form>
@@ -1409,6 +1417,164 @@ function loadDashboard(user) {
             </div>
         </div>
     `;
+
+    // Agregar estilos CSS para los botones personalizados
+    const buttonStyles = `
+    <style>
+        .btn-custom {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            font-family: "Montserrat", sans-serif;
+            box-shadow: 0px 6px 24px 0px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .btn-primary-custom {
+            background: #183153;
+        }
+
+        .btn-info-custom {
+            background: #0e7490;
+        }
+
+        .btn-success-custom {
+            background: #15803d;
+        }
+
+        .btn-custom:after {
+            content: " ";
+            width: 0%;
+            height: 100%;
+            background: #ffd401;
+            position: absolute;
+            transition: all 0.4s ease-in-out;
+            right: 0;
+        }
+
+        .btn-primary-custom:after {
+            background: #60a5fa;
+        }
+
+        .btn-info-custom:after {
+            background: #22d3ee;
+        }
+
+        .btn-success-custom:after {
+            background: #4ade80;
+        }
+
+        .btn-custom:hover::after {
+            right: auto;
+            left: 0;
+            width: 100%;
+        }
+
+        .btn-custom span {
+            text-align: center;
+            text-decoration: none;
+            width: 100%;
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 0.9em;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            z-index: 20;
+            transition: all 0.3s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-custom:hover span {
+            color: #183153;
+            animation: scaleUp 0.3s ease-in-out;
+        }
+
+        .btn-primary-custom:hover span {
+            color: #183153;
+        }
+
+        .btn-info-custom:hover span {
+            color: #0e7490;
+        }
+
+        .btn-success-custom:hover span {
+            color: #15803d;
+        }
+
+        @keyframes scaleUp {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(0.95);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Efectos adicionales para mejor UX */
+        .btn-custom:active {
+            transform: translateY(2px);
+            box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .btn-custom {
+                min-width: 160px;
+                margin-bottom: 10px;
+            }
+            
+            .btn-custom span {
+                padding: 10px 16px;
+                font-size: 0.85em;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .btn-custom {
+                min-width: 140px;
+            }
+            
+            .btn-custom span {
+                padding: 8px 12px;
+                font-size: 0.8em;
+            }
+            
+            .btn-custom span i {
+                margin-right: 4px !important;
+            }
+        }
+
+        /* Modo oscuro */
+        @media (prefers-color-scheme: dark) {
+            .btn-custom {
+                box-shadow: 0px 6px 24px 0px rgba(0, 0, 0, 0.4);
+            }
+            
+            .btn-custom:active {
+                box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.4);
+            }
+        }
+    </style>
+    `;
+
+    // Agregar los estilos al head si no existen
+    if (!document.getElementById('custom-buttons-styles')) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'custom-buttons-styles';
+        styleElement.textContent = buttonStyles;
+        document.head.appendChild(styleElement);
+    }
 
     // Configurar event listeners después de renderizar
     setTimeout(() => {
