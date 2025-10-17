@@ -959,47 +959,7 @@ function setupAuthListener() {
     });
 }
 
-// INICIALIZAR APLICACIÓN
-async function initializeApp() {
-    showLoading(true);
-    
-    try {
-        // VERIFICACIÓN MÁS ROBUSTA DE FIREBASE
-        if (typeof firebase === 'undefined') {
-            console.error('❌ Firebase no está cargado');
-            showError('Error: Firebase no se cargó correctamente. Recarga la página.');
-            return;
-        }
-        
-        await waitForFirebase();
-        
-        // VERIFICAR SI FIREBASE SE INICIALIZÓ CORRECTAMENTE
-        if (!firebase.apps.length) {
-            console.error('❌ Firebase no se inicializó');
-            showError('Error de configuración de Firebase');
-            return;
-        }
-        
-        console.log("✅ Firebase inicializado correctamente");
-        
-        // INICIALIZAR MANAGERS DESPUÉS DE FIREBASE
-        await initializeManagers();
-        
-        // CONFIGURAR AUTH LISTENER
-        setupAuthListener();
-        
-        // CONFIGURAR NAVEGACIÓN
-        setupNavigation();
-        
-        console.log("✅ Aplicación inicializada correctamente");
-        
-    } catch (error) {
-        console.error("Error crítico en inicialización:", error);
-        showError("Error al inicializar la aplicación: " + error.message);
-    } finally {
-        showLoading(false);
-    }
-}
+
 
 function setupNavigation() {
     console.log('🔧 Configurando navegación MEJORADA...');
@@ -1495,7 +1455,7 @@ async function loadDashboardData(year, month, timeframe = 'week', chartType = 'd
     }
 }
 
-// Función para actualizar el resumen financiero
+// Función para actualizar el resumen financiero con nuevo estilo
 function updateFinancialSummary(summary) {
     const financialSummary = document.getElementById('financial-summary');
     if (!financialSummary) return;
@@ -1506,44 +1466,109 @@ function updateFinancialSummary(summary) {
     const daysPassed = Math.min(currentDay, daysInMonth);
     const gastoDiarioPromedio = daysPassed > 0 ? summary.totalExpense / daysPassed : 0;
     
+    // Calcular porcentajes para las barras de progreso
+    const ingresoPorcentaje = Math.min((summary.totalIncome / (summary.totalIncome + 10000)) * 100, 100);
+    const gastoPorcentaje = Math.min((summary.totalExpense / (summary.totalIncome || 1)) * 100, 100);
+    const balancePorcentaje = summary.totalIncome > 0 ? Math.min((Math.abs(summary.balance) / summary.totalIncome) * 100, 100) : 0;
+    const gastoDiarioPorcentaje = Math.min((gastoDiarioPromedio / 500) * 100, 100); // Asumiendo $500 como máximo diario
+    
     const summaryHTML = `
-        <div class="col-md-3">
-            <div class="card border-success h-100">
-                <div class="card-body text-center p-2">
-                    <i class="fas fa-arrow-down text-success fa-lg mb-2"></i>
-                    <h6 class="card-title text-success mb-1">INGRESOS</h6>
-                    <p class="card-text h5 text-success mb-1">$${summary.totalIncome.toFixed(2)}</p>
-                    <small class="text-muted">Total del mes</small>
+        <div class="col-md-3 mb-4">
+            <div class="card-finance income-card">
+                <div class="title">
+                    <span class="icon-income">
+                        <svg width="20" fill="currentColor" height="20" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1344 960v-128q0-26-19-45t-45-19h-128v-128q0-26-19-45t-45-19h-256q-26 0-45 19t-19 45v128h-128q-26 0-45 19t-19 45v128q0 26 19 45t45 19h128v128q0 26 19 45t45 19h256q26 0 45-19t19-45v-128h128q26 0 45-19t19-45zm320-64q0 209-103 385.5t-279.5 279.5-385.5 103-385.5-103-279.5-279.5-103-385.5 103-385.5 279.5-279.5 385.5-103 385.5 103 279.5 279.5 103 385.5z"></path>
+                        </svg>
+                    </span>
+                    <p class="title-text">INGRESOS</p>
+                    <p class="percent positive">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1792" fill="currentColor" height="16" width="16">
+                            <path d="M1408 1216q0 26-19 45t-45 19h-896q-26 0-45-19t-19-45 19-45l448-448q19-19 45-19t45 19l448 448q19 19 19 45z"></path>
+                        </svg>
+                        ${summary.totalIncome > 0 ? Math.round((summary.totalIncome / (summary.totalIncome + summary.totalExpense)) * 100) : 0}%
+                    </p>
+                </div>
+                <div class="data">
+                    <p>$${summary.totalIncome.toFixed(2)}</p>
+                    <div class="range">
+                        <div class="fill income-fill" style="width: ${ingresoPorcentaje}%"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-danger h-100">
-                <div class="card-body text-center p-2">
-                    <i class="fas fa-arrow-up text-danger fa-lg mb-2"></i>
-                    <h6 class="card-title text-danger mb-1">GASTOS</h6>
-                    <p class="card-text h5 text-danger mb-1">$${summary.totalExpense.toFixed(2)}</p>
-                    <small class="text-muted">Total del mes</small>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card-finance expense-card">
+                <div class="title">
+                    <span class="icon-expense">
+                        <svg width="20" fill="currentColor" height="20" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1344 960v-128q0-26-19-45t-45-19h-384q-26 0-45 19t-19 45v128q0 26 19 45t45 19h384q26 0 45-19t19-45zm320-64q0 209-103 385.5t-279.5 279.5-385.5 103-385.5-103-279.5-279.5-103-385.5 103-385.5 279.5-279.5 385.5-103 385.5 103 279.5 279.5 103 385.5z"></path>
+                        </svg>
+                    </span>
+                    <p class="title-text">GASTOS</p>
+                    <p class="percent negative">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1792" fill="currentColor" height="16" width="16">
+                            <path d="M1408 1216q0 26-19 45t-45 19h-896q-26 0-45-19t-19-45 19-45l448-448q19-19 45-19t45 19l448 448q19 19 19 45z" transform="rotate(180, 896, 896)"></path>
+                        </svg>
+                        ${summary.totalIncome > 0 ? Math.round((summary.totalExpense / summary.totalIncome) * 100) : 0}%
+                    </p>
+                </div>
+                <div class="data">
+                    <p>$${summary.totalExpense.toFixed(2)}</p>
+                    <div class="range">
+                        <div class="fill expense-fill" style="width: ${gastoPorcentaje}%"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card ${summary.balance >= 0 ? 'border-primary' : 'border-warning'} h-100">
-                <div class="card-body text-center p-2">
-                    <i class="fas fa-balance-scale ${summary.balance >= 0 ? 'text-primary' : 'text-warning'} fa-lg mb-2"></i>
-                    <h6 class="card-title ${summary.balance >= 0 ? 'text-primary' : 'text-warning'} mb-1">BALANCE</h6>
-                    <p class="card-text h5 ${summary.balance >= 0 ? 'text-primary' : 'text-warning'} mb-1">$${summary.balance.toFixed(2)}</p>
-                    <small class="text-muted">${summary.balance >= 0 ? '👍 Positivo' : '👎 Negativo'}</small>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card-finance ${summary.balance >= 0 ? 'balance-positive' : 'balance-negative'}">
+                <div class="title">
+                    <span class="icon-balance">
+                        <svg width="20" fill="currentColor" height="20" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1408 992v-192q0-14-9-23t-23-9h-96v-288q0-14-9-23t-23-9h-192q-14 0-23 9t-9 23v288h-96q-14 0-23 9t-9 23v192q0 14 9 23t23 9h96v288q0 14 9 23t23 9h192q14 0 23-9t9-23v-288h96q14 0 23-9t9-23zm-384-896q-148 0-273 73t-198 198-73 273 73 273 198 198 273 73 273-73 198-198 73-273-73-273-198-198-273-73zm768 544v96q0 14-9 23t-23 9h-96v96q0 14-9 23t-23 9h-96q-14 0-23-9t-9-23v-96h-96q-14 0-23-9t-9-23v-96q0-14 9-23t23-9h96v-96q0-14 9-23t23-9h96q14 0 23 9t9 23v96h96q14 0 23 9t9 23z"></path>
+                        </svg>
+                    </span>
+                    <p class="title-text">BALANCE</p>
+                    <p class="percent ${summary.balance >= 0 ? 'positive' : 'negative'}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1792" fill="currentColor" height="16" width="16">
+                            <path d="${summary.balance >= 0 ? 'M1408 1216q0 26-19 45t-45 19h-896q-26 0-45-19t-19-45 19-45l448-448q19-19 45-19t45 19l448 448q19 19 19 45z' : 'M1408 1216q0 26-19 45t-45 19h-896q-26 0-45-19t-19-45 19-45l448-448q19-19 45-19t45 19l448 448q19 19 19 45z'}" ${summary.balance < 0 ? 'transform="rotate(180, 896, 896)"' : ''}></path>
+                        </svg>
+                        ${summary.totalIncome > 0 ? Math.round((Math.abs(summary.balance) / summary.totalIncome) * 100) : 0}%
+                    </p>
+                </div>
+                <div class="data">
+                    <p class="${summary.balance >= 0 ? 'text-positive' : 'text-negative'}">$${Math.abs(summary.balance).toFixed(2)}</p>
+                    <div class="range">
+                        <div class="fill ${summary.balance >= 0 ? 'balance-positive-fill' : 'balance-negative-fill'}" style="width: ${balancePorcentaje}%"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-info h-100">
-                <div class="card-body text-center p-2">
-                    <i class="fas fa-fire text-info fa-lg mb-2"></i>
-                    <h6 class="card-title text-info mb-1">GASTO DIARIO</h6>
-                    <p class="card-text h5 text-info mb-1">$${gastoDiarioPromedio.toFixed(2)}</p>
-                    <small class="text-muted">Día ${daysPassed}/${daysInMonth}</small>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card-finance daily-card">
+                <div class="title">
+                    <span class="icon-daily">
+                        <svg width="20" fill="currentColor" height="20" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1024 544v448q0 14-9 23t-23 9h-320q-14 0-23-9t-9-23v-64q0-14 9-23t23-9h224v-352q0-14 9-23t23-9h64q14 0 23 9t9 23zm416 352q0-148-73-273t-198-198-273-73-273 73-198 198-73 273 73 273 198 198 273 73 273-73 198-198 73-273zm224 0q0 209-103 385.5t-279.5 279.5-385.5 103-385.5-103-279.5-279.5-103-385.5 103-385.5 279.5-279.5 385.5-103 385.5 103 279.5 279.5 103 385.5z"></path>
+                        </svg>
+                    </span>
+                    <p class="title-text">GASTO DIARIO</p>
+                    <p class="percent neutral">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1792" fill="currentColor" height="16" width="16">
+                            <path d="M1408 1216q0 26-19 45t-45 19h-896q-26 0-45-19t-19-45 19-45l448-448q19-19 45-19t45 19l448 448q19 19 19 45z"></path>
+                        </svg>
+                        ${Math.round(gastoDiarioPorcentaje)}%
+                    </p>
+                </div>
+                <div class="data">
+                    <p>$${gastoDiarioPromedio.toFixed(2)}</p>
+                    <div class="range">
+                        <div class="fill daily-fill" style="width: ${gastoDiarioPorcentaje}%"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1551,6 +1576,219 @@ function updateFinancialSummary(summary) {
     
     financialSummary.innerHTML = summaryHTML;
 }
+
+// Agregar estos estilos CSS al archivo de estilos existente
+const financeCardsStyles = `
+<style>
+    .card-finance {
+        padding: 1.5rem;
+        background-color: var(--card-bg, #e5e7eb);
+        box-shadow: -10px -10px 20px rgba(255, 255, 255, 0.8), 
+                    10px 10px 20px rgba(153, 161, 175, 0.3),
+                    inset -10px -10px 20px rgba(209, 213, 220, 0.5);
+        border-radius: 20px;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+
+    .card-finance:hover {
+        transform: translateY(-5px);
+        box-shadow: -15px -15px 30px rgba(255, 255, 255, 0.8), 
+                    15px 15px 30px rgba(153, 161, 175, 0.4);
+    }
+
+    .title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .title span {
+        position: relative;
+        padding: 0.5rem;
+        box-shadow: -2px -2px 4px rgba(255, 255, 255, 0.8),
+                    2px 2px 4px rgba(153, 161, 175, 0.3);
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .icon-income {
+        background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .icon-expense {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .icon-balance {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+
+    .icon-daily {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    }
+
+    .title span svg {
+        color: #ffffff;
+        height: 1.2rem;
+        width: 1.2rem;
+    }
+
+    .title-text {
+        margin-left: 0.75rem;
+        color: var(--text-color, #374151);
+        font-size: 0.9rem;
+        font-weight: 600;
+        flex: 1;
+    }
+
+    .percent {
+        display: flex;
+        align-items: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 8px;
+        box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+                    inset 2px 2px 4px rgba(153, 161, 175, 0.2);
+    }
+
+    .percent.positive {
+        color: #10b981;
+        background-color: rgba(16, 185, 129, 0.1);
+    }
+
+    .percent.negative {
+        color: #ef4444;
+        background-color: rgba(239, 68, 68, 0.1);
+    }
+
+    .percent.neutral {
+        color: #6b7280;
+        background-color: rgba(107, 114, 128, 0.1);
+    }
+
+    .percent svg {
+        margin-right: 0.25rem;
+    }
+
+    .data {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    .data p {
+        margin-top: 0.5rem;
+        margin-bottom: 1rem;
+        color: var(--text-color, #1f2937);
+        font-size: 1.75rem;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .text-positive {
+        color: #10b981 !important;
+    }
+
+    .text-negative {
+        color: #ef4444 !important;
+    }
+
+    .data .range {
+        position: relative;
+        background-color: var(--card-bg, #e5e7eb);
+        box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.8),
+                    inset 2px 2px 4px rgba(153, 161, 175, 0.3);
+        width: 100%;
+        height: 0.5rem;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .data .range .fill {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        border-radius: 0.5rem;
+        transition: width 0.8s ease-in-out;
+    }
+
+    .income-fill {
+        background: linear-gradient(90deg, #10b981, #34d399);
+    }
+
+    .expense-fill {
+        background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+
+    .balance-positive-fill {
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    .balance-negative-fill {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .daily-fill {
+        background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    }
+
+    /* Modo oscuro */
+    @media (prefers-color-scheme: dark) {
+        .card-finance {
+            background-color: var(--card-bg, #1e1e1e);
+            box-shadow: -10px -10px 20px rgba(255, 255, 255, 0.05), 
+                        10px 10px 20px rgba(0, 0, 0, 0.3),
+                        inset -10px -10px 20px rgba(255, 255, 255, 0.05);
+        }
+
+        .title span {
+            box-shadow: -2px -2px 4px rgba(255, 255, 255, 0.05),
+                        2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .data .range {
+            box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+                        inset 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .percent {
+            box-shadow: inset -2px -2px 4px rgba(255, 255, 255, 0.05),
+                        inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .card-finance {
+            padding: 1rem;
+        }
+        
+        .title span {
+            width: 2rem;
+            height: 2rem;
+        }
+        
+        .title span svg {
+            height: 1rem;
+            width: 1rem;
+        }
+        
+        .data p {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+`;
+
+// Agregar los estilos al documento
+document.head.insertAdjacentHTML('beforeend', financeCardsStyles);
 
 function processTransactionDate(transaction) {
     
