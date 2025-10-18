@@ -4031,24 +4031,13 @@ function showLoading(show) {
     }
 }
 
-// FUNCIÓN TOAST MEJORADA - Reemplaza completamente la función existente
+
+// FUNCIÓN TOAST MEJORADA - Reemplaza COMPLETAMENTE la función existente
 function showToast(message, type = 'info') {
     console.log(`🔔 Mostrando toast: ${message} (${type})`);
     
-    // Destruir toasts existentes primero
-    const existingToasts = document.querySelectorAll('.custom-toast');
-    existingToasts.forEach(toast => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    });
-    
+    // Crear o obtener el contenedor
     let toastContainer = document.getElementById('toast-container');
-    
-    // Crear contenedor si no existe
     if (!toastContainer) {
         console.log('📦 Creando contenedor de toast...');
         toastContainer = document.createElement('div');
@@ -4059,7 +4048,18 @@ function showToast(message, type = 'info') {
 
     const toastId = 'toast-' + Date.now();
     
-    // Usar clases CSS en lugar de estilos inline
+    // Definir íconos SVG
+    const getToastIcon = (type) => {
+        const icons = {
+            success: '<path d="M15.795 8.342l-5.909 9.545a1 1 0 0 1-1.628 0l-3.182-4.909a1 1 0 0 1 1.629-1.165l2.556 3.953L14.165 7.51a1 1 0 0 1 1.63 1.165z"></path>',
+            error: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
+            warning: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
+            info: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm1 15h-2v-6h2v6zm0-8h-2v-2h2v2z"></path>',
+            danger: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>'
+        };
+        return icons[type] || icons.info;
+    };
+
     const toastHTML = `
         <div id="${toastId}" class="custom-toast ${type}">
             <div class="toast-content">
@@ -4073,22 +4073,20 @@ function showToast(message, type = 'info') {
         </div>
     `;
     
-    toastContainer.innerHTML += toastHTML;
+    // Agregar el toast al contenedor
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
     
     const toastElement = document.getElementById(toastId);
     
-    // Forzar reflow
-    toastElement.offsetHeight;
-    
-    // Mostrar toast con animación
+    // Forzar reflow y luego mostrar
     setTimeout(() => {
         toastElement.classList.add('show');
-        console.log('✅ Toast mostrado correctamente');
-    }, 100);
+        console.log('✅ Toast mostrado visualmente');
+    }, 10);
     
     // Auto-remover después de 4 segundos
     setTimeout(() => {
-        if (toastElement && toastElement.classList.contains('show')) {
+        if (toastElement && toastElement.parentNode) {
             toastElement.classList.remove('show');
             setTimeout(() => {
                 if (toastElement.parentNode) {
