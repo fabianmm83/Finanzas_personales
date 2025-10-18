@@ -1,5 +1,5 @@
 // sw.js - Service Worker para Finanzas Personales con Notificaciones y Actualizaciones
-const CACHE_NAME = 'finanzas-v1.4';
+const CACHE_NAME = 'finanzas-v1.5';
 
 // Archivos para cache
 const STATIC_CACHE_FILES = [
