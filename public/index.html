@@ -544,11 +544,16 @@
             color: var(--footer-text) !important;
         }
 
-        /* ESTILOS TOAST PERSONALIZADOS - Agrega esto en tu CSS */
-.custom-toast {
+  
+        /* ESTILOS TOAST PERSONALIZADOS - Reemplaza completamente la sección existente */
+.toast-container {
     position: fixed;
     bottom: 20px;
     right: 20px;
+    z-index: 99999;
+}
+
+.custom-toast {
     background-color: #333;
     color: #fff;
     padding: 16px 20px;
@@ -559,11 +564,11 @@
     justify-content: space-between;
     min-width: 300px;
     max-width: 400px;
-    z-index: 99999;
     transform: translateX(400px);
     opacity: 0;
     transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     border-left: 4px solid rgba(255, 255, 255, 0.3);
+    margin-bottom: 10px;
 }
 
 .custom-toast.show {
@@ -599,14 +604,45 @@
     box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.4);
 }
 
+/* Colores específicos para cada tipo */
+.custom-toast.success {
+    background-color: #10b981;
+    border-left-color: #059669;
+}
+
+.custom-toast.error {
+    background-color: #ef4444;
+    border-left-color: #dc2626;
+}
+
+.custom-toast.warning {
+    background-color: #f59e0b;
+    border-left-color: #d97706;
+}
+
+.custom-toast.info {
+    background-color: #3b82f6;
+    border-left-color: #2563eb;
+}
+
+.custom-toast.danger {
+    background-color: #dc3545;
+    border-left-color: #c53030;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
-    .custom-toast {
-        min-width: 280px;
-        max-width: calc(100vw - 40px);
+    .toast-container {
         right: 20px;
         left: 20px;
         bottom: 20px;
+    }
+    
+    .custom-toast {
+        min-width: 280px;
+        max-width: calc(100vw - 40px);
+        margin-left: auto;
+        margin-right: auto;
     }
     
     .toast-content {
@@ -632,10 +668,29 @@
 
 /* Modo oscuro para toasts */
 @media (prefers-color-scheme: dark) {
-    .custom-toast {
-        background-color: #1f2937;
-        color: #f9fafb;
-        box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+    .custom-toast.success {
+        background-color: #065f46;
+        border-left-color: #047857;
+    }
+    
+    .custom-toast.error {
+        background-color: #7f1d1d;
+        border-left-color: #991b1b;
+    }
+    
+    .custom-toast.warning {
+        background-color: #92400e;
+        border-left-color: #b45309;
+    }
+    
+    .custom-tocast.info {
+        background-color: #1e3a8a;
+        border-left-color: #3730a3;
+    }
+    
+    .custom-toast.danger {
+        background-color: #7f1d1d;
+        border-left-color: #991b1b;
     }
 }
     </style>
@@ -1191,6 +1246,13 @@
             console.log(`Toast [${type}]: ${message}`);
         }
 
+        function testToasts() {
+    console.log('🧪 Probando toasts...');
+    showToast('Este es un mensaje de éxito', 'success');
+    setTimeout(() => showToast('Este es un mensaje de error', 'error'), 1000);
+    setTimeout(() => showToast('Este es un mensaje de advertencia', 'warning'), 2000);
+    setTimeout(() => showToast('Este es un mensaje informativo', 'info'), 3000);
+}
         // Verificar ícono PWA
         function checkPWAIcon() {
             const icon = new Image();

@@ -4031,54 +4031,43 @@ function showLoading(show) {
     }
 }
 
-// FUNCIÓN TOAST MEJORADA - Reemplaza la función showToast existente
+// FUNCIÓN TOAST MEJORADA - Reemplaza completamente la función existente
 function showToast(message, type = 'info') {
-    // Destruir toasts de Bootstrap existentes primero
-    const existingToasts = document.querySelectorAll('.custom-toast');
-    existingToasts.forEach(toast => toast.remove());
+    console.log(`🔔 Mostrando toast: ${message} (${type})`);
     
-    const toastContainer = document.getElementById('toast-container');
+    // Destruir toasts existentes primero
+    const existingToasts = document.querySelectorAll('.custom-toast');
+    existingToasts.forEach(toast => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
+    });
+    
+    let toastContainer = document.getElementById('toast-container');
+    
+    // Crear contenedor si no existe
     if (!toastContainer) {
-        console.error('❌ Toast container no encontrado');
-        return;
+        console.log('📦 Creando contenedor de toast...');
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container';
+        document.body.appendChild(toastContainer);
     }
 
     const toastId = 'toast-' + Date.now();
     
-    // Definir íconos y colores según el tipo
-    const toastConfig = {
-        success: {
-            icon: '<path d="M15.795 8.342l-5.909 9.545a1 1 0 0 1-1.628 0l-3.182-4.909a1 1 0 0 1 1.629-1.165l2.556 3.953L14.165 7.51a1 1 0 0 1 1.63 1.165z"></path>',
-            bgColor: '#10b981'
-        },
-        error: {
-            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
-            bgColor: '#ef4444'
-        },
-        warning: {
-            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
-            bgColor: '#f59e0b'
-        },
-        info: {
-            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm1 15h-2v-6h2v6zm0-8h-2v-2h2v2z"></path>',
-            bgColor: '#3b82f6'
-        },
-        danger: {
-            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
-            bgColor: '#dc3545'
-        }
-    };
-
-    const config = toastConfig[type] || toastConfig.info;
-
+    // Usar clases CSS en lugar de estilos inline
     const toastHTML = `
-        <div id="${toastId}" class="custom-toast" style="background-color: ${config.bgColor}">
+        <div id="${toastId}" class="custom-toast ${type}">
             <div class="toast-content">
                 ${message}
             </div>
             <div class="toast-icon">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    ${config.icon}
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+                    ${getToastIcon(type)}
                 </svg>
             </div>
         </div>
@@ -4088,22 +4077,42 @@ function showToast(message, type = 'info') {
     
     const toastElement = document.getElementById(toastId);
     
+    // Forzar reflow
+    toastElement.offsetHeight;
+    
     // Mostrar toast con animación
     setTimeout(() => {
         toastElement.classList.add('show');
+        console.log('✅ Toast mostrado correctamente');
     }, 100);
     
     // Auto-remover después de 4 segundos
     setTimeout(() => {
-        toastElement.classList.remove('show');
-        setTimeout(() => {
-            if (toastElement.parentNode) {
-                toastElement.remove();
-            }
-        }, 300);
+        if (toastElement && toastElement.classList.contains('show')) {
+            toastElement.classList.remove('show');
+            setTimeout(() => {
+                if (toastElement.parentNode) {
+                    toastElement.remove();
+                    console.log('🗑️ Toast removido');
+                }
+            }, 300);
+        }
     }, 4000);
     
     return toastElement;
+}
+
+// Función auxiliar para obtener íconos SVG
+function getToastIcon(type) {
+    const icons = {
+        success: '<path d="M15.795 8.342l-5.909 9.545a1 1 0 0 1-1.628 0l-3.182-4.909a1 1 0 0 1 1.629-1.165l2.556 3.953L14.165 7.51a1 1 0 0 1 1.63 1.165z"></path>',
+        error: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
+        warning: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
+        info: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm1 15h-2v-6h2v6zm0-8h-2v-2h2v2z"></path>',
+        danger: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>'
+    };
+    
+    return icons[type] || icons.info;
 }
 
 function showError(message) {
