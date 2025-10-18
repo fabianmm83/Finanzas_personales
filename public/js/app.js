@@ -2478,9 +2478,141 @@ function applyFilters() {
     showToast('Filtros aplicados: ' + (category || 'Todas categorías'), 'success');
 }
 
+function showAddTransaction() {
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="mb-0">
+                                <i class="fas fa-plus-circle text-primary me-2"></i>
+                                Agregar Transacción
+                            </h2>
+                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                                <i class="fas fa-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                        
+                        <form id="add-transaction-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="transaction-type" class="form-label">Tipo</label>
+                                    <select class="form-select" id="transaction-type" required>
+                                        <option value="income">Ingreso</option>
+                                        <option value="expense">Gasto</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="transaction-amount" class="form-label">Monto ($)</label>
+                                    <input type="number" step="0.01" class="form-control" id="transaction-amount" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="transaction-category" class="form-label">Categoría</label>
+                                <input type="text" class="form-control" id="transaction-category" placeholder="Ej: Salario, Comida, Transporte..." required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="transaction-date" class="form-label">Fecha</label>
+                                <input type="date" class="form-control" id="transaction-date" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="transaction-description" class="form-label">Descripción (Opcional)</label>
+                                <textarea class="form-control" id="transaction-description" rows="2" placeholder="Descripción adicional..."></textarea>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submit-transaction-btn">
+                                    <i class="fas fa-save me-2"></i>Guardar Transacción
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // CORRECCIÓN: Usar función utilitaria para fecha por defecto
+    document.getElementById('transaction-date').value = adjustDateForInput(new Date());
+
+    // Variable para controlar el estado del envío
+    let isSubmitting = false;
+
+    document.getElementById('add-transaction-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Prevenir múltiples envíos
+        if (isSubmitting) {
+            console.log('⏳ Transacción ya en proceso, ignorando clic...');
+            return;
+        }
+        
+        isSubmitting = true;
+        
+        // Deshabilitar botón y mostrar estado de carga
+        const submitBtn = document.getElementById('submit-transaction-btn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+        submitBtn.disabled = true;
+        
+        try {
+            // CORRECCIÓN: Usar función utilitaria para procesar fecha
+            const rawDate = document.getElementById('transaction-date').value;
+            const adjustedDate = adjustDateFromInput(rawDate);
+            
+            const transactionData = {
+                type: document.getElementById('transaction-type').value,
+                amount: parseFloat(document.getElementById('transaction-amount').value),
+                category: document.getElementById('transaction-category').value,
+                date: adjustedDate.toISOString(), // Enviar como ISO string completo
+                description: document.getElementById('transaction-description').value
+            };
+
+            console.log('📅 Fecha enviada al backend:', {
+                raw: rawDate,
+                adjusted: adjustedDate,
+                iso: adjustedDate.toISOString(),
+                local: adjustedDate.toLocaleDateString('es-ES')
+            });
+
+            await transactionManager.addTransaction(transactionData);
+            showToast('Transacción agregada correctamente', 'success');
+            
+            // Limpiar formulario después de éxito
+            document.getElementById('add-transaction-form').reset();
+            document.getElementById('transaction-date').value = adjustDateForInput(new Date());
+            
+            // Actualizar dashboard después de un breve delay
+            setTimeout(() => {
+                if (window.auth && window.auth.currentUser) {
+                    console.log('🔄 Actualizando dashboard después de agregar transacción...');
+                    loadDashboard(window.auth.currentUser);
+                }
+            }, 1500);
+            
+        } catch (error) {
+            console.error('Error guardando transacción:', error);
+            showToast('Error al guardar la transacción: ' + error.message, 'danger');
+        } finally {
+            // Rehabilitar botón sin importar el resultado
+            isSubmitting = false;
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    });
+}
+
 async function editTransaction(transactionId) {
     try {
         console.log('🔍 Editando transacción ID:', transactionId);
+        
+        // Prevenir múltiples clics
+        if (window.isEditingTransaction) {
+            console.log('⏳ Ya se está editando una transacción...');
+            return;
+        }
+        window.isEditingTransaction = true;
         
         // Obtener la transacción
         const transactions = await transactionManager.getTransactions({});
@@ -2489,6 +2621,7 @@ async function editTransaction(transactionId) {
         if (!transaction) {
             console.error('❌ Transacción no encontrada');
             showToast('Transacción no encontrada', 'danger');
+            window.isEditingTransaction = false;
             return;
         }
         
@@ -2501,25 +2634,47 @@ async function editTransaction(transactionId) {
         
     } catch (error) {
         console.error('❌ Error al editar transacción:', error);
-        showToast('Error al cargar la transacción', 'danger');
+        showToast('Error al cargar la transacción: ' + error.message, 'danger');
+    } finally {
+        window.isEditingTransaction = false;
     }
 }
 
 async function deleteTransaction(transactionId) {
+    // Prevenir múltiples clics
+    if (window.isDeletingTransaction) {
+        console.log('⏳ Ya se está eliminando una transacción...');
+        return;
+    }
+    
     if (confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
+        window.isDeletingTransaction = true;
+        
         try {
+            // Mostrar indicador de carga
+            showToast('Eliminando transacción...', 'info');
+            
             await transactionManager.deleteTransaction(transactionId);
             showToast('Transacción eliminada correctamente', 'success');
-            // Recargar el dashboard
-            if (window.auth && window.auth.currentUser) {
-                loadDashboard(window.auth.currentUser);
-            }
+            
+            // Actualizar dashboard después de un breve delay
+            setTimeout(() => {
+                if (window.auth && window.auth.currentUser) {
+                    console.log('🔄 Actualizando dashboard después de eliminar transacción...');
+                    loadDashboard(window.auth.currentUser);
+                }
+            }, 1500);
+            
         } catch (error) {
             console.error('Error al eliminar transacción:', error);
-            showToast('Error al eliminar la transacción', 'danger');
+            showToast('Error al eliminar la transacción: ' + error.message, 'danger');
+        } finally {
+            window.isDeletingTransaction = false;
         }
     }
 }
+
+
 
 function showEditTransactionForm(transaction) {
     const content = document.getElementById('content');
@@ -2588,7 +2743,7 @@ function showEditTransactionForm(transaction) {
                                 <textarea class="form-control" id="edit-transaction-description" rows="2">${transaction.description || ''}</textarea>
                             </div>
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">
+                                <button type="submit" class="btn btn-primary btn-lg" id="update-transaction-btn">
                                     <i class="fas fa-save me-2"></i>Actualizar Transacción
                                 </button>
                             </div>
@@ -2599,133 +2754,72 @@ function showEditTransactionForm(transaction) {
         </div>
     `;
 
+    // Variable para controlar el estado del envío
+    let isUpdating = false;
+
     document.getElementById('edit-transaction-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // CORRECCIÓN: Usar función utilitaria para procesar fecha
-        const rawDate = document.getElementById('edit-transaction-date').value;
-        const adjustedDate = adjustDateFromInput(rawDate);
+        // Prevenir múltiples envíos
+        if (isUpdating) {
+            console.log('⏳ Actualización ya en proceso, ignorando clic...');
+            return;
+        }
         
-        const transactionData = {
-            type: document.getElementById('edit-transaction-type').value,
-            amount: parseFloat(document.getElementById('edit-transaction-amount').value),
-            category: document.getElementById('edit-transaction-category').value,
-            date: adjustedDate.toISOString(), // Enviar como ISO string completo
-            description: document.getElementById('edit-transaction-description').value
-        };
-
-        console.log('📅 Fecha enviada al backend:', {
-            raw: rawDate,
-            adjusted: adjustedDate,
-            iso: adjustedDate.toISOString(),
-            local: adjustedDate.toLocaleDateString('es-ES')
-        });
-
+        isUpdating = true;
+        
+        // Deshabilitar botón y mostrar estado de carga
+        const updateBtn = document.getElementById('update-transaction-btn');
+        const originalText = updateBtn.innerHTML;
+        updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+        updateBtn.disabled = true;
+        
         try {
+            // CORRECCIÓN: Usar función utilitaria para procesar fecha
+            const rawDate = document.getElementById('edit-transaction-date').value;
+            const adjustedDate = adjustDateFromInput(rawDate);
+            
+            const transactionData = {
+                type: document.getElementById('edit-transaction-type').value,
+                amount: parseFloat(document.getElementById('edit-transaction-amount').value),
+                category: document.getElementById('edit-transaction-category').value,
+                date: adjustedDate.toISOString(), // Enviar como ISO string completo
+                description: document.getElementById('edit-transaction-description').value
+            };
+
+            console.log('📅 Fecha enviada al backend:', {
+                raw: rawDate,
+                adjusted: adjustedDate,
+                iso: adjustedDate.toISOString(),
+                local: adjustedDate.toLocaleDateString('es-ES')
+            });
+
             await transactionManager.updateTransaction(transaction.id, transactionData);
             showToast('Transacción actualizada correctamente', 'success');
-            if (window.auth && window.auth.currentUser) {
-                loadDashboard(window.auth.currentUser);
-            }
+            
+            // Actualizar dashboard después de un breve delay
+            setTimeout(() => {
+                if (window.auth && window.auth.currentUser) {
+                    console.log('🔄 Actualizando dashboard después de editar transacción...');
+                    loadDashboard(window.auth.currentUser);
+                }
+            }, 1500);
+            
         } catch (error) {
             console.error('Error actualizando transacción:', error);
-            showToast('Error al actualizar la transacción', 'danger');
+            showToast('Error al actualizar la transacción: ' + error.message, 'danger');
+        } finally {
+            // Rehabilitar botón sin importar el resultado
+            isUpdating = false;
+            updateBtn.innerHTML = originalText;
+            updateBtn.disabled = false;
         }
     });
 }
 
-function showAddTransaction() {
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h2 class="mb-0">
-                                <i class="fas fa-plus-circle text-primary me-2"></i>
-                                Agregar Transacción
-                            </h2>
-                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
-                                <i class="fas fa-arrow-left me-1"></i> Volver
-                            </button>
-                        </div>
-                        
-                        <form id="add-transaction-form">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="transaction-type" class="form-label">Tipo</label>
-                                    <select class="form-select" id="transaction-type" required>
-                                        <option value="income">Ingreso</option>
-                                        <option value="expense">Gasto</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="transaction-amount" class="form-label">Monto ($)</label>
-                                    <input type="number" step="0.01" class="form-control" id="transaction-amount" required>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="transaction-category" class="form-label">Categoría</label>
-                                <input type="text" class="form-control" id="transaction-category" placeholder="Ej: Salario, Comida, Transporte..." required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="transaction-date" class="form-label">Fecha</label>
-                                <input type="date" class="form-control" id="transaction-date" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="transaction-description" class="form-label">Descripción (Opcional)</label>
-                                <textarea class="form-control" id="transaction-description" rows="2" placeholder="Descripción adicional..."></textarea>
-                            </div>
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    <i class="fas fa-save me-2"></i>Guardar Transacción
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
 
-    // CORRECCIÓN: Usar función utilitaria para fecha por defecto
-    document.getElementById('transaction-date').value = adjustDateForInput(new Date());
 
-    document.getElementById('add-transaction-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        // CORRECCIÓN: Usar función utilitaria para procesar fecha
-        const rawDate = document.getElementById('transaction-date').value;
-        const adjustedDate = adjustDateFromInput(rawDate);
-        
-        const transactionData = {
-            type: document.getElementById('transaction-type').value,
-            amount: parseFloat(document.getElementById('transaction-amount').value),
-            category: document.getElementById('transaction-category').value,
-            date: adjustedDate.toISOString(), // Enviar como ISO string completo
-            description: document.getElementById('transaction-description').value
-        };
 
-        console.log('📅 Fecha enviada al backend:', {
-            raw: rawDate,
-            adjusted: adjustedDate,
-            iso: adjustedDate.toISOString(),
-            local: adjustedDate.toLocaleDateString('es-ES')
-        });
-
-        try {
-            await transactionManager.addTransaction(transactionData);
-            showToast('Transacción agregada correctamente', 'success');
-            if (window.auth && window.auth.currentUser) {
-                loadDashboard(window.auth.currentUser);
-            }
-        } catch (error) {
-            console.error('Error guardando transacción:', error);
-            showToast('Error al guardar la transacción', 'danger');
-        }
-    });
-}
 
 // FUNCIONES UTILITARIAS PARA MANEJO DE FECHAS
 function adjustDateForInput(date) {
@@ -3937,17 +4031,55 @@ function showLoading(show) {
     }
 }
 
+// FUNCIÓN TOAST MEJORADA - Reemplaza la función showToast existente
 function showToast(message, type = 'info') {
+    // Destruir toasts de Bootstrap existentes primero
+    const existingToasts = document.querySelectorAll('.custom-toast');
+    existingToasts.forEach(toast => toast.remove());
+    
     const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        console.error('❌ Toast container no encontrado');
+        return;
+    }
+
     const toastId = 'toast-' + Date.now();
     
+    // Definir íconos y colores según el tipo
+    const toastConfig = {
+        success: {
+            icon: '<path d="M15.795 8.342l-5.909 9.545a1 1 0 0 1-1.628 0l-3.182-4.909a1 1 0 0 1 1.629-1.165l2.556 3.953L14.165 7.51a1 1 0 0 1 1.63 1.165z"></path>',
+            bgColor: '#10b981'
+        },
+        error: {
+            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
+            bgColor: '#ef4444'
+        },
+        warning: {
+            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
+            bgColor: '#f59e0b'
+        },
+        info: {
+            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm1 15h-2v-6h2v6zm0-8h-2v-2h2v2z"></path>',
+            bgColor: '#3b82f6'
+        },
+        danger: {
+            icon: '<path d="M12 2c5.514 0 10 4.486 10 10s-4.486 10-10 10-10-4.486-10-10 4.486-10 10-10zm0-2c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-1 15h2v2h-2v-2zm0-10h2v8h-2v-8z"></path>',
+            bgColor: '#dc3545'
+        }
+    };
+
+    const config = toastConfig[type] || toastConfig.info;
+
     const toastHTML = `
-        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        <div id="${toastId}" class="custom-toast" style="background-color: ${config.bgColor}">
+            <div class="toast-content">
+                ${message}
+            </div>
+            <div class="toast-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    ${config.icon}
+                </svg>
             </div>
         </div>
     `;
@@ -3955,13 +4087,23 @@ function showToast(message, type = 'info') {
     toastContainer.innerHTML += toastHTML;
     
     const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
     
-    // Remover el toast del DOM después de que se oculte
-    toastElement.addEventListener('hidden.bs.toast', () => {
-        toastElement.remove();
-    });
+    // Mostrar toast con animación
+    setTimeout(() => {
+        toastElement.classList.add('show');
+    }, 100);
+    
+    // Auto-remover después de 4 segundos
+    setTimeout(() => {
+        toastElement.classList.remove('show');
+        setTimeout(() => {
+            if (toastElement.parentNode) {
+                toastElement.remove();
+            }
+        }, 300);
+    }, 4000);
+    
+    return toastElement;
 }
 
 function showError(message) {

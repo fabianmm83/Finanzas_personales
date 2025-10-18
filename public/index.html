@@ -543,6 +543,101 @@
             background-color: var(--footer-bg) !important;
             color: var(--footer-text) !important;
         }
+
+        /* ESTILOS TOAST PERSONALIZADOS - Agrega esto en tu CSS */
+.custom-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #333;
+    color: #fff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 300px;
+    max-width: 400px;
+    z-index: 99999;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border-left: 4px solid rgba(255, 255, 255, 0.3);
+}
+
+.custom-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast-content {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    flex: 1;
+    margin-right: 15px;
+    line-height: 1.4;
+}
+
+.toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+}
+
+.toast-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: #fff;
+}
+
+/* Efectos hover */
+.custom-toast:hover {
+    transform: translateX(0) translateY(-2px);
+    box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .custom-toast {
+        min-width: 280px;
+        max-width: calc(100vw - 40px);
+        right: 20px;
+        left: 20px;
+        bottom: 20px;
+    }
+    
+    .toast-content {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .custom-toast {
+        min-width: 250px;
+        padding: 14px 16px;
+    }
+    
+    .toast-content {
+        font-size: 12px;
+    }
+    
+    .toast-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Modo oscuro para toasts */
+@media (prefers-color-scheme: dark) {
+    .custom-toast {
+        background-color: #1f2937;
+        color: #f9fafb;
+        box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
+    }
+}
     </style>
 
 </head>
