@@ -2543,7 +2543,7 @@ function showAddTransaction() {
                                 <i class="fas fa-plus-circle text-primary me-2"></i>
                                 Agregar Transacción
                             </h2>
-                            <button class="btn btn-secondary" onclick="loadDashboard(auth.currentUser)">
+                            <button class="btn btn-secondary" onclick="goBack()">
                                 <i class="fas fa-arrow-left me-1"></i> Volver
                             </button>
                         </div>
@@ -3253,7 +3253,7 @@ function showBudgetsPage() {
                     Mis Presupuestos
                 </h2>
                 <div>
-                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
+                    <button class="btn btn-secondary" onclick="goBack()">
                         <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
                     </button>
                     <button class="btn btn-primary" onclick="showAddBudget()">
@@ -4524,6 +4524,84 @@ async function logout() {
     }
 }
 
+// ==================== SOLUCIÓN SIMPLE PARA BOTÓN ATRÁS ====================
+
+let currentPage = 'dashboard';
+
+// Función para manejar navegación
+function goTo(page) {
+    currentPage = page;
+    
+    // Ejecutar la página correspondiente
+    const user = firebase.auth().currentUser;
+    switch(page) {
+        case 'dashboard':
+            if (user) loadDashboard(user);
+            else loadLoginPage();
+            break;
+        case 'login':
+            loadLoginPage();
+            break;
+        case 'profile':
+            if (user) showProfile();
+            else loadLoginPage();
+            break;
+        case 'add-transaction':
+            if (user) showAddTransaction();
+            else loadLoginPage();
+            break;
+        case 'transactions':
+            if (user) showAllTransactions();
+            else loadLoginPage();
+            break;
+        case 'budgets':
+            if (user) showBudgetsPage();
+            else loadLoginPage();
+            break;
+        default:
+            if (user) loadDashboard(user);
+            else loadLoginPage();
+    }
+}
+
+// Función para volver atrás
+function goBack() {
+    const user = firebase.auth().currentUser;
+    
+    // Si no hay usuario, siempre ir al login
+    if (!user) {
+        loadLoginPage();
+        return;
+    }
+    
+    // Navegación simple basada en la página actual
+    switch(currentPage) {
+        case 'profile':
+        case 'add-transaction':
+        case 'transactions':
+        case 'budgets':
+        case 'add-budget':
+            // Desde cualquier página secundaria, volver al dashboard
+            loadDashboard(user);
+            break;
+        case 'dashboard':
+            // Si está en dashboard, mostrar confirmación de salida
+            if (confirm('¿Quieres salir de la aplicación?')) {
+                // Cerrar la app (en móvil) o recargar (en web)
+                if (window.navigator && window.navigator.app) {
+                    window.navigator.app.exitApp();
+                } else {
+                    window.close();
+                }
+            }
+            break;
+        default:
+            loadDashboard(user);
+    }
+}
+
+
+
 
 
 // ==================== EVENT LISTENERS GLOBALES ====================
@@ -4547,6 +4625,19 @@ window.addEventListener('error', function(event) {
         showToast('Ocurrió un error inesperado', 'danger');
     }
 });
+
+
+// Manejar el botón atrás del navegador
+window.addEventListener('popstate', function(event) {
+    event.preventDefault();
+    goBack();
+});
+
+// Para Android (si es una PWA)
+document.addEventListener('backbutton', function(e) {
+    e.preventDefault();
+    goBack();
+}, false);
 
 window.addEventListener('unhandledrejection', function(event) {
     console.error('❌ Promise rechazada no manejada:', event.reason);
