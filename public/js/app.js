@@ -1248,11 +1248,11 @@ function handleLoginLogo() {
     });
 }
 
-function loadDashboard(user) {
-    console.log('🚀 INICIANDO loadDashboard CORREGIDA...', { 
+function loadDashboard(user, year = null, month = null) {
+    console.log('🚀 INICIANDO loadDashboard CON NAVEGACIÓN...', { 
         user: user ? user.email : 'null',
-        authUser: window.auth?.currentUser?.email,
-        firebaseUser: firebase.auth().currentUser?.email
+        year: year,
+        month: month
     });
     
     // CORRECCIÓN: Usar siempre firebase.auth() directamente para evitar conflictos
@@ -1273,20 +1273,34 @@ function loadDashboard(user) {
     console.log('✅ Cargando dashboard para:', currentUser.email);
     
     const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
+    const currentMonth = month || now.getMonth() + 1;
+    const currentYear = year || now.getFullYear();
     
-    // HTML COMPLETO del dashboard - ASEGURAR que todos los elementos existan
+    // HTML COMPLETO del dashboard - CON NAVEGACIÓN ENTRE MESES
     content.innerHTML = `
         <div class="container mt-4">
-            <!-- Título y fecha -->
+            <!-- Título y navegación de meses -->
             <div class="text-center mb-4">
-                <h1 class="text-primary">
-                    Movimientos de ${getMonthName(currentMonth)} ${currentYear}
-                </h1>
-                <p class="text-muted">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button class="btn btn-outline-primary" onclick="navigateMonth(${currentYear}, ${currentMonth}, 'prev')">
+                        <i class="fas fa-chevron-left me-2"></i>Mes Anterior
+                    </button>
+                    
+                    <h1 class="text-primary flex-grow-1 mx-3">
+                        Movimientos de ${getMonthName(currentMonth)} ${currentYear}
+                    </h1>
+                    
+                    <button class="btn btn-outline-primary" onclick="navigateMonth(${currentYear}, ${currentMonth}, 'next')">
+                        Mes Siguiente<i class="fas fa-chevron-right ms-2"></i>
+                    </button>
+                </div>
+                
+                <p class="text-muted clickable-date" onclick="showMonthSelector(${currentYear}, ${currentMonth})">
                     <i class="far fa-calendar-alt me-1"></i>
                     Del ${getFirstDayOfMonth(currentYear, currentMonth)} al ${getLastDayOfMonth(currentYear, currentMonth)}
+                    <small class="ms-1 text-primary">
+                        <i class="fas fa-chevron-down"></i>
+                    </small>
                 </p>
             </div>
 
@@ -1300,6 +1314,7 @@ function loadDashboard(user) {
                 </div>
             </div>
 
+            <!-- Resto del contenido del dashboard se mantiene igual -->
             <!-- Botones principales con nuevo estilo -->
             <div class="row justify-content-center mb-4">
                 <div class="col-md-12">
@@ -1342,7 +1357,7 @@ function loadDashboard(user) {
                 <div class="card shadow">
                     <div class="card-body">
                         <h5 class="card-title">
-                            <i class="fas fa-list me-2"></i>Transacciones Recientes
+                            <i class="fas fa-list me-2"></i>Transacciones de ${getMonthName(currentMonth)} ${currentYear}
                         </h5>
                         <div id="transactions-list">
                             <div class="text-center py-4">
@@ -1418,161 +1433,58 @@ function loadDashboard(user) {
         </div>
     `;
 
-    // Agregar estilos CSS para los botones personalizados
-    const buttonStyles = `
-    <style>
-        .btn-custom {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 8px;
-            font-family: "Montserrat", sans-serif;
-            box-shadow: 0px 6px 24px 0px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            cursor: pointer;
-            border: none;
-            transition: all 0.3s ease;
-            min-width: 200px;
-        }
-
-        .btn-primary-custom {
-            background: #183153;
-        }
-
-        .btn-info-custom {
-            background: #0e7490;
-        }
-
-        .btn-success-custom {
-            background: #15803d;
-        }
-
-        .btn-custom:after {
-            content: " ";
-            width: 0%;
-            height: 100%;
-            background: #ffd401;
-            position: absolute;
-            transition: all 0.4s ease-in-out;
-            right: 0;
-        }
-
-        .btn-primary-custom:after {
-            background: #60a5fa;
-        }
-
-        .btn-info-custom:after {
-            background: #22d3ee;
-        }
-
-        .btn-success-custom:after {
-            background: #4ade80;
-        }
-
-        .btn-custom:hover::after {
-            right: auto;
-            left: 0;
-            width: 100%;
-        }
-
-        .btn-custom span {
-            text-align: center;
-            text-decoration: none;
-            width: 100%;
-            padding: 12px 20px;
-            color: #fff;
-            font-size: 0.9em;
-            font-weight: 600;
-            letter-spacing: 0.1em;
-            z-index: 20;
-            transition: all 0.3s ease-in-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn-custom:hover span {
-            color: #183153;
-            animation: scaleUp 0.3s ease-in-out;
-        }
-
-        .btn-primary-custom:hover span {
-            color: #183153;
-        }
-
-        .btn-info-custom:hover span {
-            color: #0e7490;
-        }
-
-        .btn-success-custom:hover span {
-            color: #15803d;
-        }
-
-        @keyframes scaleUp {
-            0% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(0.95);
-            }
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        /* Efectos adicionales para mejor UX */
-        .btn-custom:active {
-            transform: translateY(2px);
-            box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .btn-custom {
-                min-width: 160px;
-                margin-bottom: 10px;
+    // Agregar estilos CSS para la fecha clickeable
+    const dateStyles = `
+        <style>
+            .clickable-date {
+                cursor: pointer;
+                transition: all 0.3s ease;
+                padding: 8px 16px;
+                border-radius: 8px;
+                display: inline-block;
             }
             
-            .btn-custom span {
-                padding: 10px 16px;
-                font-size: 0.85em;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .btn-custom {
-                min-width: 140px;
+            .clickable-date:hover {
+                background-color: rgba(52, 152, 219, 0.1);
+                transform: translateY(-2px);
             }
             
-            .btn-custom span {
-                padding: 8px 12px;
-                font-size: 0.8em;
+            .month-selector {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 2rem;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                z-index: 1050;
+                min-width: 300px;
             }
             
-            .btn-custom span i {
-                margin-right: 4px !important;
-            }
-        }
-
-        /* Modo oscuro */
-        @media (prefers-color-scheme: dark) {
-            .btn-custom {
-                box-shadow: 0px 6px 24px 0px rgba(0, 0, 0, 0.4);
+            .month-selector-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 1040;
             }
             
-            .btn-custom:active {
-                box-shadow: 0px 4px 16px 0px rgba(0, 0, 0, 0.4);
+            @media (prefers-color-scheme: dark) {
+                .month-selector {
+                    background: var(--card-bg);
+                    color: var(--text-color);
+                }
             }
-        }
-    </style>
+        </style>
     `;
-
-    // Agregar los estilos al head si no existen
-    if (!document.getElementById('custom-buttons-styles')) {
+    
+    if (!document.getElementById('date-navigation-styles')) {
         const styleElement = document.createElement('style');
-        styleElement.id = 'custom-buttons-styles';
-        styleElement.textContent = buttonStyles;
+        styleElement.id = 'date-navigation-styles';
+        styleElement.textContent = dateStyles;
         document.head.appendChild(styleElement);
     }
 
@@ -1589,15 +1501,17 @@ function loadDashboard(user) {
         console.log('✅ Dashboard HTML renderizado, cargando datos...');
     }, 100);
 
-    // Cargar datos del dashboard
+    // Cargar datos del dashboard para el mes específico
     loadDashboardData(currentYear, currentMonth, currentTimeframe);
 }
 
-// FUNCIÓN MEJORADA: Cargar datos del dashboard con selector de vista temporal
+// FUNCIÓN MEJORADA: Cargar datos del dashboard con navegación
 async function loadDashboardData(year, month, timeframe = 'week', chartType = 'doughnut') {
     showLoading(true);
     
     try {
+        console.log(`📊 Cargando datos para: ${getMonthName(month)} ${year}`);
+        
         // Obtener datos de transacciones
         const dashboardData = await transactionManager.getDashboardData(month, year);
         
@@ -1612,6 +1526,8 @@ async function loadDashboardData(year, month, timeframe = 'week', chartType = 'd
         
         // Cargar categorías en filtros
         loadCategoriesFilter(dashboardData.categories);
+        
+        showToast(`Datos de ${getMonthName(month)} ${year} cargados`, 'success');
         
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -1742,6 +1658,149 @@ function updateFinancialSummary(summary) {
     
     financialSummary.innerHTML = summaryHTML;
 }
+
+
+// FUNCIONES DE NAVEGACIÓN ENTRE MESES
+
+// Navegar al mes anterior o siguiente
+function navigateMonth(currentYear, currentMonth, direction) {
+    let newYear = currentYear;
+    let newMonth = currentMonth;
+    
+    if (direction === 'prev') {
+        // Mes anterior
+        if (currentMonth === 1) {
+            newMonth = 12;
+            newYear = currentYear - 1;
+        } else {
+            newMonth = currentMonth - 1;
+        }
+    } else if (direction === 'next') {
+        // Mes siguiente
+        if (currentMonth === 12) {
+            newMonth = 1;
+            newYear = currentYear + 1;
+        } else {
+            newMonth = currentMonth + 1;
+        }
+    }
+    
+    console.log(`🔄 Navegando a: ${getMonthName(newMonth)} ${newYear}`);
+    
+    // Cargar dashboard con nuevo mes
+    const currentUser = firebase.auth().currentUser;
+    if (currentUser) {
+        loadDashboard(currentUser, newYear, newMonth);
+    }
+}
+
+// Mostrar selector de mes/año
+function showMonthSelector(currentYear, currentMonth) {
+    // Crear overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'month-selector-overlay';
+    overlay.onclick = function() {
+        document.body.removeChild(overlay);
+        document.body.removeChild(selector);
+    };
+    
+    // Crear selector
+    const selector = document.createElement('div');
+    selector.className = 'month-selector';
+    selector.innerHTML = `
+        <div class="text-center mb-4">
+            <h4 class="text-primary">
+                <i class="far fa-calendar-alt me-2"></i>
+                Seleccionar Mes
+            </h4>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-6">
+                <label for="year-select" class="form-label">Año</label>
+                <select class="form-select" id="year-select">
+                    ${generateYearOptions(currentYear)}
+                </select>
+            </div>
+            <div class="col-6">
+                <label for="month-select" class="form-label">Mes</label>
+                <select class="form-select" id="month-select">
+                    ${generateMonthOptions(currentMonth)}
+                </select>
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button class="btn btn-secondary flex-grow-1" onclick="closeMonthSelector()">
+                Cancelar
+            </button>
+            <button class="btn btn-primary flex-grow-1" onclick="goToSelectedMonth()">
+                <i class="fas fa-check me-2"></i>Ir al Mes
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(selector);
+    
+    // Establecer valores actuales
+    document.getElementById('year-select').value = currentYear;
+    document.getElementById('month-select').value = currentMonth;
+}
+
+// Cerrar selector de mes
+function closeMonthSelector() {
+    const overlay = document.querySelector('.month-selector-overlay');
+    const selector = document.querySelector('.month-selector');
+    
+    if (overlay) document.body.removeChild(overlay);
+    if (selector) document.body.removeChild(selector);
+}
+
+// Ir al mes seleccionado
+function goToSelectedMonth() {
+    const year = parseInt(document.getElementById('year-select').value);
+    const month = parseInt(document.getElementById('month-select').value);
+    
+    console.log(`🎯 Yendo a: ${getMonthName(month)} ${year}`);
+    
+    closeMonthSelector();
+    
+    const currentUser = firebase.auth().currentUser;
+    if (currentUser) {
+        loadDashboard(currentUser, year, month);
+    }
+}
+
+// Generar opciones de años (desde 2020 hasta año actual + 1)
+function generateYearOptions(currentYear) {
+    const currentYearNum = new Date().getFullYear();
+    let options = '';
+    
+    for (let year = 2020; year <= currentYearNum + 1; year++) {
+        options += `<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`;
+    }
+    
+    return options;
+}
+
+// Generar opciones de meses
+function generateMonthOptions(currentMonth) {
+    let options = '';
+    const months = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    months.forEach((month, index) => {
+        const monthNumber = index + 1;
+        options += `<option value="${monthNumber}" ${monthNumber === currentMonth ? 'selected' : ''}>${month}</option>`;
+    });
+    
+    return options;
+}
+
+
 
 // Agregar estos estilos CSS al archivo de estilos existente
 const financeCardsStyles = `
@@ -2887,10 +2946,14 @@ function showAllTransactions() {
     loadAllTransactions(currentYear, currentMonth);
 }
 
-// Función para cargar todas las transacciones CORREGIDA
-async function loadAllTransactions(year, month) {
+// Función para cargar todas las transacciones CON NAVEGACIÓN ENTRE MESES
+async function loadAllTransactions(year = null, month = null) {
     try {
-        const transactions = await transactionManager.getTransactions({ month, year });
+        const now = new Date();
+        const currentYear = year || now.getFullYear();
+        const currentMonth = month || now.getMonth() + 1;
+        
+        const transactions = await transactionManager.getTransactions({ month: currentMonth, year: currentYear });
         const transactionsList = document.getElementById('all-transactions-list');
         
         if (!transactionsList) {
@@ -2898,20 +2961,66 @@ async function loadAllTransactions(year, month) {
             return;
         }
 
+        // Actualizar el título con navegación
+        const titleElement = document.querySelector('#content h2');
+        if (titleElement) {
+            titleElement.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-outline-primary" onclick="navigateTransactionsMonth(${currentYear}, ${currentMonth}, 'prev')">
+                        <i class="fas fa-chevron-left me-2"></i>Mes Anterior
+                    </button>
+                    
+                    <span class="flex-grow-1 mx-3">
+                        <i class="fas fa-list text-primary me-2"></i>
+                        Transacciones de ${getMonthName(currentMonth)} ${currentYear}
+                    </span>
+                    
+                    <button class="btn btn-outline-primary" onclick="navigateTransactionsMonth(${currentYear}, ${currentMonth}, 'next')">
+                        Mes Siguiente<i class="fas fa-chevron-right ms-2"></i>
+                    </button>
+                </div>
+                
+                <p class="text-muted mt-2 clickable-date" onclick="showTransactionsMonthSelector(${currentYear}, ${currentMonth})">
+                    <i class="far fa-calendar-alt me-1"></i>
+                    Del ${getFirstDayOfMonth(currentYear, currentMonth)} al ${getLastDayOfMonth(currentYear, currentMonth)}
+                    <small class="ms-1 text-primary">
+                        <i class="fas fa-chevron-down"></i>
+                    </small>
+                </p>
+            `;
+        }
+
         if (transactions.length === 0) {
             transactionsList.innerHTML = `
                 <div class="text-center py-5">
                     <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay transacciones para mostrar</p>
-                    <button class="btn btn-primary" onclick="showAddTransaction()">
-                        <i class="fas fa-plus me-2"></i>Agregar primera transacción
-                    </button>
+                    <p class="text-muted">No hay transacciones para ${getMonthName(currentMonth)} ${currentYear}</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-primary" onclick="showAddTransaction()">
+                            <i class="fas fa-plus me-2"></i>Agregar transacción
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="loadAllTransactions(${now.getFullYear()}, ${now.getMonth() + 1})">
+                            <i class="fas fa-calendar me-2"></i>Volver al mes actual
+                        </button>
+                    </div>
                 </div>
             `;
             return;
         }
 
         let transactionsHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-receipt me-2"></i>
+                    ${transactions.length} transacción${transactions.length !== 1 ? 'es' : ''} encontrada${transactions.length !== 1 ? 's' : ''}
+                </h5>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportTransactionsToCSV(${currentYear}, ${currentMonth})">
+                        <i class="fas fa-download me-1"></i>Exportar CSV
+                    </button>
+                </div>
+            </div>
+            
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
@@ -2927,10 +3036,20 @@ async function loadAllTransactions(year, month) {
                     <tbody>
         `;
         
+        // Calcular totales
+        let totalIncome = 0;
+        let totalExpense = 0;
+        
         transactions.forEach(transaction => {
             const date = processTransactionDate(transaction);
             const isIncome = transaction.type === 'income';
             const formattedDate = date.toLocaleDateString('es-ES');
+            
+            if (isIncome) {
+                totalIncome += transaction.amount;
+            } else {
+                totalExpense += transaction.amount;
+            }
             
             transactionsHTML += `
                 <tr>
@@ -2959,21 +3078,246 @@ async function loadAllTransactions(year, month) {
             `;
         });
         
+        const balance = totalIncome - totalExpense;
+        
         transactionsHTML += `
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Resumen del mes -->
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card bg-success bg-opacity-10">
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-success">
+                                <i class="fas fa-arrow-down me-2"></i>Total Ingresos
+                            </h6>
+                            <h4 class="text-success">+$${totalIncome.toFixed(2)}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-danger bg-opacity-10">
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-danger">
+                                <i class="fas fa-arrow-up me-2"></i>Total Gastos
+                            </h6>
+                            <h4 class="text-danger">-$${totalExpense.toFixed(2)}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card ${balance >= 0 ? 'bg-primary bg-opacity-10' : 'bg-warning bg-opacity-10'}">
+                        <div class="card-body text-center">
+                            <h6 class="card-title ${balance >= 0 ? 'text-primary' : 'text-warning'}">
+                                <i class="fas fa-balance-scale me-2"></i>Balance
+                            </h6>
+                            <h4 class="${balance >= 0 ? 'text-primary' : 'text-warning'}">
+                                ${balance >= 0 ? '+' : ''}$${balance.toFixed(2)}
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="mt-3 text-center">
-                <p class="text-muted">Mostrando ${transactions.length} transacciones</p>
+                <p class="text-muted">
+                    Mostrando ${transactions.length} transacción${transactions.length !== 1 ? 'es' : ''} de ${getMonthName(currentMonth)} ${currentYear}
+                </p>
+                <button class="btn btn-outline-secondary" onclick="loadAllTransactions(${now.getFullYear()}, ${now.getMonth() + 1})">
+                    <i class="fas fa-calendar me-2"></i>Volver al mes actual
+                </button>
             </div>
         `;
         
         transactionsList.innerHTML = transactionsHTML;
         
+        console.log(`✅ Transacciones cargadas: ${transactions.length} para ${getMonthName(currentMonth)} ${currentYear}`);
+        
     } catch (error) {
         console.error('Error loading all transactions:', error);
         showToast('Error al cargar las transacciones', 'danger');
+        
+        const transactionsList = document.getElementById('all-transactions-list');
+        if (transactionsList) {
+            transactionsList.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar transacciones</h5>
+                    <p class="mb-3">${error.message}</p>
+                    <button class="btn btn-primary" onclick="loadAllTransactions()">
+                        <i class="fas fa-redo me-2"></i>Reintentar
+                    </button>
+                </div>
+            `;
+        }
     }
+}
+
+// FUNCIONES DE NAVEGACIÓN PARA TRANSACCIONES
+
+// Navegar al mes anterior o siguiente en transacciones
+function navigateTransactionsMonth(currentYear, currentMonth, direction) {
+    let newYear = currentYear;
+    let newMonth = currentMonth;
+    
+    if (direction === 'prev') {
+        // Mes anterior
+        if (currentMonth === 1) {
+            newMonth = 12;
+            newYear = currentYear - 1;
+        } else {
+            newMonth = currentMonth - 1;
+        }
+    } else if (direction === 'next') {
+        // Mes siguiente
+        if (currentMonth === 12) {
+            newMonth = 1;
+            newYear = currentYear + 1;
+        } else {
+            newMonth = currentMonth + 1;
+        }
+    }
+    
+    console.log(`🔄 Navegando transacciones a: ${getMonthName(newMonth)} ${newYear}`);
+    loadAllTransactions(newYear, newMonth);
+}
+
+// Mostrar selector de mes/año para transacciones
+function showTransactionsMonthSelector(currentYear, currentMonth) {
+    // Crear overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'month-selector-overlay';
+    overlay.onclick = function() {
+        document.body.removeChild(overlay);
+        document.body.removeChild(selector);
+    };
+    
+    // Crear selector
+    const selector = document.createElement('div');
+    selector.className = 'month-selector';
+    selector.innerHTML = `
+        <div class="text-center mb-4">
+            <h4 class="text-primary">
+                <i class="fas fa-list me-2"></i>
+                Seleccionar Mes para Transacciones
+            </h4>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-6">
+                <label for="transactions-year-select" class="form-label">Año</label>
+                <select class="form-select" id="transactions-year-select">
+                    ${generateYearOptions(currentYear)}
+                </select>
+            </div>
+            <div class="col-6">
+                <label for="transactions-month-select" class="form-label">Mes</label>
+                <select class="form-select" id="transactions-month-select">
+                    ${generateMonthOptions(currentMonth)}
+                </select>
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button class="btn btn-secondary flex-grow-1" onclick="closeTransactionsMonthSelector()">
+                Cancelar
+            </button>
+            <button class="btn btn-primary flex-grow-1" onclick="goToSelectedTransactionsMonth()">
+                <i class="fas fa-check me-2"></i>Ver Transacciones
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(selector);
+    
+    // Establecer valores actuales
+    document.getElementById('transactions-year-select').value = currentYear;
+    document.getElementById('transactions-month-select').value = currentMonth;
+}
+
+// Cerrar selector de mes para transacciones
+function closeTransactionsMonthSelector() {
+    const overlay = document.querySelector('.month-selector-overlay');
+    const selector = document.querySelector('.month-selector');
+    
+    if (overlay) document.body.removeChild(overlay);
+    if (selector) document.body.removeChild(selector);
+}
+
+// Ir al mes seleccionado en transacciones
+function goToSelectedTransactionsMonth() {
+    const year = parseInt(document.getElementById('transactions-year-select').value);
+    const month = parseInt(document.getElementById('transactions-month-select').value);
+    
+    console.log(`🎯 Yendo a transacciones de: ${getMonthName(month)} ${year}`);
+    
+    closeTransactionsMonthSelector();
+    loadAllTransactions(year, month);
+}
+
+// Función para exportar transacciones a CSV
+function exportTransactionsToCSV(year, month) {
+    try {
+        // Esta función necesitaría implementarse completamente
+        // Por ahora mostramos un mensaje
+        showToast(`Función de exportación para ${getMonthName(month)} ${year} en desarrollo`, 'info');
+        console.log(`📊 Exportando transacciones de ${getMonthName(month)} ${year} a CSV`);
+        
+        // Aquí iría la lógica para generar y descargar el CSV
+        // const csvContent = generateCSVContent(transactions);
+        // downloadCSV(csvContent, `transacciones-${getMonthName(month)}-${year}.csv`);
+        
+    } catch (error) {
+        console.error('Error exporting transactions:', error);
+        showToast('Error al exportar transacciones', 'danger');
+    }
+}
+
+// También necesitas actualizar la función showAllTransactions para aceptar parámetros
+function showAllTransactions(year = null, month = null) {
+    const now = new Date();
+    const currentYear = year || now.getFullYear();
+    const currentMonth = month || now.getMonth() + 1;
+    
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0" id="transactions-title">
+                    <i class="fas fa-list text-primary me-2"></i>
+                    Cargando transacciones...
+                </h2>
+                <div>
+                    <button class="btn btn-secondary me-2" onclick="loadDashboard(firebase.auth().currentUser)">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddTransaction()">
+                        <i class="fas fa-plus me-1"></i> Nueva Transacción
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <div id="all-transactions-list">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                                    <p class="text-muted">Cargando transacciones...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Cargar las transacciones con los parámetros especificados
+    loadAllTransactions(currentYear, currentMonth);
 }
 
 function showBudgetsPage() {
