@@ -1656,8 +1656,6 @@ function updateFinancialSummary(summary) {
 }
 
 
-// FUNCIONES DE NAVEGACIÓN ENTRE MESES
-
 // Navegar al mes anterior o siguiente
 function navigateMonth(currentYear, currentMonth, direction) {
     let newYear = currentYear;
@@ -2958,10 +2956,7 @@ async function loadAllTransactions(year = null, month = null) {
                         <i class="fas fa-chevron-left me-2"></i>Mes Anterior
                     </button>
                     
-                    <span class="flex-grow-1 mx-3 text-center my-2 my-md-0">
-                        <i class="fas fa-list text-primary me-2"></i>
-                        Transacciones de ${getMonthName(currentMonth)} ${currentYear}
-                    </span>
+                    
                     
                     <button class="btn btn-outline-primary mt-2 mt-md-0" onclick="navigateTransactionsMonth(${currentYear}, ${currentMonth}, 'next')">
                         Mes Siguiente<i class="fas fa-chevron-right ms-2"></i>
@@ -3069,41 +3064,7 @@ async function loadAllTransactions(year = null, month = null) {
                 </table>
             </div>
             
-            <!-- Resumen del mes - Responsive -->
-            <div class="row mt-4">
-                <div class="col-sm-4 mb-3">
-                    <div class="card bg-success bg-opacity-10 h-100">
-                        <div class="card-body text-center">
-                            <h6 class="card-title text-success">
-                                <i class="fas fa-arrow-down me-2"></i>Total Ingresos
-                            </h6>
-                            <h4 class="text-success">+$${totalIncome.toFixed(2)}</h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-4 mb-3">
-                    <div class="card bg-danger bg-opacity-10 h-100">
-                        <div class="card-body text-center">
-                            <h6 class="card-title text-danger">
-                                <i class="fas fa-arrow-up me-2"></i>Total Gastos
-                            </h6>
-                            <h4 class="text-danger">-$${totalExpense.toFixed(2)}</h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-4 mb-3">
-                    <div class="card ${balance >= 0 ? 'bg-primary bg-opacity-10' : 'bg-warning bg-opacity-10'} h-100">
-                        <div class="card-body text-center">
-                            <h6 class="card-title ${balance >= 0 ? 'text-primary' : 'text-warning'}">
-                                <i class="fas fa-balance-scale me-2"></i>Balance
-                            </h6>
-                            <h4 class="${balance >= 0 ? 'text-primary' : 'text-warning'}">
-                                ${balance >= 0 ? '+' : ''}$${balance.toFixed(2)}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        
             
             <div class="mt-3 text-center">
                 <p class="text-muted">
