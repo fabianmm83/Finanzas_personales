@@ -3297,50 +3297,7 @@ async function exportTransactionsToCSV(year, month) {
     }
 }
 
-// También necesitas actualizar la función showAllTransactions para aceptar parámetros
-function showAllTransactions(year = null, month = null) {
-    const now = new Date();
-    const currentYear = year || now.getFullYear();
-    const currentMonth = month || now.getMonth() + 1;
-    
-    const content = document.getElementById('content');
-    content.innerHTML = `
-        <div class="container mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="mb-0" id="transactions-title">
-                    <i class="fas fa-list text-primary me-2"></i>
-                    Cargando transacciones...
-                </h2>
-                <div>
-                    <button class="btn btn-secondary me-2" onclick="loadDashboard(firebase.auth().currentUser)">
-                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
-                    </button>
-                    <button class="btn btn-primary" onclick="showAddTransaction()">
-                        <i class="fas fa-plus me-1"></i> Nueva Transacción
-                    </button>
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <div id="all-transactions-list">
-                                <div class="text-center py-5">
-                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-                                    <p class="text-muted">Cargando transacciones...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    // Cargar las transacciones con los parámetros especificados
-    loadAllTransactions(currentYear, currentMonth);
-}
 
 function showBudgetsPage() {
     const now = new Date();
