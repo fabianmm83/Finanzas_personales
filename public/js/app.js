@@ -2906,229 +2906,35 @@ function showAllTransactions() {
     
     const content = document.getElementById('content');
     content.innerHTML = `
-        <div class="container-fluid mt-3">
-            <!-- Header Responsivo -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-list text-primary fa-2x me-3"></i>
-                            <div>
-                                <h1 class="h4 mb-1">Todas las Transacciones</h1>
-                                <p class="text-muted mb-0 d-none d-md-block">
-                                    Gestión completa de tu historial financiero
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex flex-wrap gap-2">
-                            <button class="btn btn-outline-secondary" onclick="loadDashboard(firebase.auth().currentUser)">
-                                <i class="fas fa-arrow-left me-1"></i> 
-                                <span class="d-none d-sm-inline">Volver</span>
-                            </button>
-                            <button class="btn btn-primary" onclick="showAddTransaction()">
-                                <i class="fas fa-plus me-1"></i> 
-                                <span class="d-none d-sm-inline">Nueva</span>
-                                <span class="d-inline d-sm-none">+</span>
-                            </button>
-                        </div>
-                    </div>
+        <div class="container mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-list text-primary me-2"></i>
+                    Todas las Transacciones
+                </h2>
+                <div>
+                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddTransaction()">
+                        <i class="fas fa-plus me-1"></i> Nueva Transacción
+                    </button>
                 </div>
             </div>
 
-            <!-- Filtros Rápidos -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card shadow-sm">
-                        <div class="card-body py-3">
-                            <div class="row g-2 align-items-center">
-                                <div class="col-md-4 col-sm-6">
-                                    <label for="quick-month" class="form-label small fw-bold mb-1">Mes</label>
-                                    <select class="form-select form-select-sm" id="quick-month" onchange="filterTransactionsByMonth()">
-                                        ${Array.from({length: 12}, (_, i) => `
-                                            <option value="${i + 1}" ${i + 1 === currentMonth ? 'selected' : ''}>
-                                                ${getMonthName(i + 1)}
-                                            </option>
-                                        `).join('')}
-                                    </select>
-                                </div>
-                                <div class="col-md-4 col-sm-6">
-                                    <label for="quick-year" class="form-label small fw-bold mb-1">Año</label>
-                                    <input type="number" class="form-control form-control-sm" id="quick-year" 
-                                           value="${currentYear}" min="2020" max="2030" onchange="filterTransactionsByYear()">
-                                </div>
-                                <div class="col-md-4 col-sm-12">
-                                    <label for="quick-type" class="form-label small fw-bold mb-1">Tipo</label>
-                                    <select class="form-select form-select-sm" id="quick-type" onchange="filterTransactionsByType()">
-                                        <option value="all">Todos los tipos</option>
-                                        <option value="income">Ingresos</option>
-                                        <option value="expense">Gastos</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Estadísticas Rápidas -->
-            <div class="row mb-4 d-none d-md-flex">
-                <div class="col-12">
-                    <div class="row g-3" id="quick-stats">
-                        <div class="col-md-3 col-sm-6">
-                            <div class="card bg-light border-0">
-                                <div class="card-body text-center py-3">
-                                    <i class="fas fa-arrow-down text-success fa-lg mb-2"></i>
-                                    <h6 class="card-title mb-1">Total Ingresos</h6>
-                                    <p class="card-text h5 text-success mb-0" id="stats-income">$0.00</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="card bg-light border-0">
-                                <div class="card-body text-center py-3">
-                                    <i class="fas fa-arrow-up text-danger fa-lg mb-2"></i>
-                                    <h6 class="card-title mb-1">Total Gastos</h6>
-                                    <p class="card-text h5 text-danger mb-0" id="stats-expense">$0.00</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="card bg-light border-0">
-                                <div class="card-body text-center py-3">
-                                    <i class="fas fa-balance-scale text-primary fa-lg mb-2"></i>
-                                    <h6 class="card-title mb-1">Balance</h6>
-                                    <p class="card-text h5 text-primary mb-0" id="stats-balance">$0.00</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="card bg-light border-0">
-                                <div class="card-body text-center py-3">
-                                    <i class="fas fa-receipt text-info fa-lg mb-2"></i>
-                                    <h6 class="card-title mb-1">Transacciones</h6>
-                                    <p class="card-text h5 text-info mb-0" id="stats-count">0</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Contenido Principal -->
             <div class="row">
-                <div class="col-12">
+                <div class="col-md-12">
                     <div class="card shadow">
-                        <div class="card-header bg-white py-3">
-                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
-                                <h5 class="card-title mb-0 d-flex align-items-center">
-                                    <i class="fas fa-receipt text-primary me-2"></i>
-                                    Historial de Transacciones
-                                </h5>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-outline-primary btn-sm" onclick="exportTransactionsToCSV(${currentYear}, ${currentMonth})">
-                                        <i class="fas fa-download me-1"></i>
-                                        <span class="d-none d-sm-inline">Exportar</span>
-                                    </button>
-                                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleSearch()">
-                                        <i class="fas fa-search me-1"></i>
-                                        <span class="d-none d-sm-inline">Buscar</span>
-                                    </button>
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="fas fa-receipt me-2"></i>Historial de Transacciones
+                            </h5>
+                            <div id="all-transactions-list">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                                    <p class="text-muted">Cargando transacciones...</p>
                                 </div>
                             </div>
-                            
-                            <!-- Barra de Búsqueda -->
-                            <div class="mt-2 d-none" id="search-bar">
-                                <div class="input-group input-group-sm">
-                                    <input type="text" class="form-control" placeholder="Buscar en descripciones..." id="search-input">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="card-body p-0">
-                            <!-- Vista de Escritorio -->
-                            <div class="d-none d-lg-block">
-                                <div class="table-responsive">
-                                    <table class="table table-hover mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th width="120" class="ps-3">
-                                                    <span class="d-flex align-items-center">
-                                                        Fecha
-                                                        <button class="btn btn-sm btn-link p-0 ms-1" onclick="sortTransactions('date')">
-                                                            <i class="fas fa-sort"></i>
-                                                        </button>
-                                                    </span>
-                                                </th>
-                                                <th width="150">Categoría</th>
-                                                <th>Descripción</th>
-                                                <th width="100" class="text-center">Tipo</th>
-                                                <th width="120" class="text-end pe-3">Monto</th>
-                                                <th width="100" class="text-center">Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="all-transactions-list">
-                                            <tr>
-                                                <td colspan="6" class="text-center py-5">
-                                                    <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
-                                                    <p class="text-muted">Cargando transacciones...</p>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <!-- Vista Móvil -->
-                            <div class="d-block d-lg-none">
-                                <div id="mobile-transactions-list" class="p-3">
-                                    <div class="text-center py-4">
-                                        <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
-                                        <p class="text-muted">Cargando transacciones...</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Footer con Paginación -->
-                        <div class="card-footer bg-white border-top-0">
-                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-                                <div class="text-muted small" id="transactions-info">
-                                    Mostrando <span id="shown-count">0</span> de <span id="total-count">0</span> transacciones
-                                </div>
-                                
-                                <div class="d-flex gap-2" id="pagination-controls">
-                                    <button class="btn btn-outline-primary btn-sm" disabled>
-                                        <i class="fas fa-chevron-left"></i>
-                                    </button>
-                                    <span class="px-3 py-1 bg-light rounded">1</span>
-                                    <button class="btn btn-outline-primary btn-sm" disabled>
-                                        <i class="fas fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Botones Flotantes para Móvil -->
-            <div class="d-block d-md-none fixed-bottom p-3">
-                <div class="d-flex justify-content-center">
-                    <div class="bg-primary rounded-pill shadow-lg p-2">
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-light btn-sm rounded-pill" onclick="loadDashboard(firebase.auth().currentUser)">
-                                <i class="fas fa-arrow-left"></i>
-                            </button>
-                            <button class="btn btn-light btn-sm rounded-pill" onclick="showAddTransaction()">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="btn btn-light btn-sm rounded-pill" onclick="exportTransactionsToCSV(${currentYear}, ${currentMonth})">
-                                <i class="fas fa-download"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -3139,242 +2945,6 @@ function showAllTransactions() {
     loadAllTransactions(currentYear, currentMonth);
 }
 
-// Funciones auxiliares para la funcionalidad responsiva
-function toggleSearch() {
-    const searchBar = document.getElementById('search-bar');
-    searchBar.classList.toggle('d-none');
-    
-    if (!searchBar.classList.contains('d-none')) {
-        document.getElementById('search-input').focus();
-    }
-}
-
-function clearSearch() {
-    document.getElementById('search-input').value = '';
-    filterTransactionsBySearch('');
-}
-
-function filterTransactionsBySearch(searchTerm) {
-    // Implementar búsqueda en tiempo real
-    console.log('Buscando:', searchTerm);
-}
-
-function filterTransactionsByMonth() {
-    const month = document.getElementById('quick-month').value;
-    const year = document.getElementById('quick-year').value;
-    loadAllTransactions(parseInt(year), parseInt(month));
-}
-
-function filterTransactionsByYear() {
-    const month = document.getElementById('quick-month').value;
-    const year = document.getElementById('quick-year').value;
-    loadAllTransactions(parseInt(year), parseInt(month));
-}
-
-function filterTransactionsByType() {
-    const type = document.getElementById('quick-type').value;
-    // Implementar filtrado por tipo
-    console.log('Filtrando por tipo:', type);
-}
-
-function sortTransactions(field) {
-    // Implementar ordenamiento
-    console.log('Ordenando por:', field);
-}
-
-// Actualizar la función loadAllTransactions para soportar el diseño responsivo
-async function loadAllTransactions(year = null, month = null) {
-    try {
-        const now = new Date();
-        const currentYear = year || now.getFullYear();
-        const currentMonth = month || now.getMonth() + 1;
-        
-        const transactions = await transactionManager.getTransactions({ month: currentMonth, year: currentYear });
-        
-        // Actualizar estadísticas rápidas
-        updateQuickStats(transactions);
-        
-        // Renderizar vista de escritorio
-        renderDesktopView(transactions, currentYear, currentMonth);
-        
-        // Renderizar vista móvil
-        renderMobileView(transactions, currentYear, currentMonth);
-        
-        console.log(`✅ Transacciones cargadas: ${transactions.length} para ${getMonthName(currentMonth)} ${currentYear}`);
-        
-    } catch (error) {
-        console.error('Error loading all transactions:', error);
-        showToast('Error al cargar las transacciones', 'danger');
-        
-        const errorHTML = `
-            <div class="alert alert-danger m-3">
-                <h5><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar transacciones</h5>
-                <p class="mb-3">${error.message}</p>
-                <button class="btn btn-primary" onclick="loadAllTransactions()">
-                    <i class="fas fa-redo me-2"></i>Reintentar
-                </button>
-            </div>
-        `;
-        
-        document.getElementById('all-transactions-list').innerHTML = errorHTML;
-        document.getElementById('mobile-transactions-list').innerHTML = errorHTML;
-    }
-}
-
-function updateQuickStats(transactions) {
-    const totalIncome = transactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-        
-    const totalExpense = transactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-        
-    const balance = totalIncome - totalExpense;
-    
-    // Actualizar elementos si existen
-    const incomeElement = document.getElementById('stats-income');
-    const expenseElement = document.getElementById('stats-expense');
-    const balanceElement = document.getElementById('stats-balance');
-    const countElement = document.getElementById('stats-count');
-    
-    if (incomeElement) incomeElement.textContent = `$${totalIncome.toFixed(2)}`;
-    if (expenseElement) expenseElement.textContent = `$${totalExpense.toFixed(2)}`;
-    if (balanceElement) balanceElement.textContent = `$${balance.toFixed(2)}`;
-    if (countElement) countElement.textContent = transactions.length;
-}
-
-function renderDesktopView(transactions, year, month) {
-    const transactionsList = document.getElementById('all-transactions-list');
-    
-    if (!transactionsList) return;
-    
-    if (transactions.length === 0) {
-        transactionsList.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-5">
-                    <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay transacciones para ${getMonthName(month)} ${year}</p>
-                    <button class="btn btn-primary" onclick="showAddTransaction()">
-                        <i class="fas fa-plus me-2"></i>Agregar transacción
-                    </button>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    let transactionsHTML = '';
-    
-    transactions.forEach(transaction => {
-        const date = processTransactionDate(transaction);
-        const isIncome = transaction.type === 'income';
-        const formattedDate = date.toLocaleDateString('es-ES');
-        
-        transactionsHTML += `
-            <tr>
-                <td class="ps-3">
-                    <small class="text-muted">${formattedDate}</small>
-                </td>
-                <td>
-                    <span class="badge bg-light text-dark border">${transaction.category}</span>
-                </td>
-                <td>
-                    <div class="d-flex flex-column">
-                        <span class="fw-medium">${transaction.description || 'Sin descripción'}</span>
-                        <small class="text-muted">ID: ${transaction.id.substring(0, 8)}...</small>
-                    </div>
-                </td>
-                <td class="text-center">
-                    <span class="badge ${isIncome ? 'bg-success' : 'bg-danger'}">
-                        ${isIncome ? 'Ingreso' : 'Gasto'}
-                    </span>
-                </td>
-                <td class="text-end pe-3 ${isIncome ? 'text-success' : 'text-danger'}">
-                    <strong>${isIncome ? '+' : '-'}$${transaction.amount.toFixed(2)}</strong>
-                </td>
-                <td class="text-center">
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button class="btn btn-outline-primary" onclick="editTransaction('${transaction.id}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-outline-danger" onclick="deleteTransaction('${transaction.id}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    
-    transactionsList.innerHTML = transactionsHTML;
-}
-
-function renderMobileView(transactions, year, month) {
-    const mobileList = document.getElementById('mobile-transactions-list');
-    
-    if (!mobileList) return;
-    
-    if (transactions.length === 0) {
-        mobileList.innerHTML = `
-            <div class="text-center py-5">
-                <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
-                <p class="text-muted">No hay transacciones para ${getMonthName(month)} ${year}</p>
-                <button class="btn btn-primary" onclick="showAddTransaction()">
-                    <i class="fas fa-plus me-2"></i>Agregar transacción
-                </button>
-            </div>
-        `;
-        return;
-    }
-    
-    let mobileHTML = '<div class="row g-3">';
-    
-    transactions.forEach(transaction => {
-        const date = processTransactionDate(transaction);
-        const isIncome = transaction.type === 'income';
-        const formattedDate = date.toLocaleDateString('es-ES');
-        
-        mobileHTML += `
-            <div class="col-12">
-                <div class="card border">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="flex-grow-1">
-                                <h6 class="card-title mb-1">${transaction.description || 'Sin descripción'}</h6>
-                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                                    <span class="badge bg-light text-dark border">${transaction.category}</span>
-                                    <span class="badge ${isIncome ? 'bg-success' : 'bg-danger'}">
-                                        ${isIncome ? 'Ingreso' : 'Gasto'}
-                                    </span>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="far fa-calendar me-1"></i>${formattedDate}
-                                </small>
-                            </div>
-                            <div class="text-end">
-                                <h5 class="${isIncome ? 'text-success' : 'text-danger'} mb-1">
-                                    ${isIncome ? '+' : '-'}$${transaction.amount.toFixed(2)}
-                                </h5>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="editTransaction('${transaction.id}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" onclick="deleteTransaction('${transaction.id}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    mobileHTML += '</div>';
-    mobileList.innerHTML = mobileHTML;
-}
 // Función para cargar todas las transacciones CON NAVEGACIÓN ENTRE MESES
 async function loadAllTransactions(year = null, month = null) {
     try {
@@ -3394,22 +2964,22 @@ async function loadAllTransactions(year = null, month = null) {
         const titleElement = document.querySelector('#content h2');
         if (titleElement) {
             titleElement.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <button class="btn btn-outline-primary" onclick="navigateTransactionsMonth(${currentYear}, ${currentMonth}, 'prev')">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+                    <button class="btn btn-outline-primary mb-2 mb-md-0" onclick="navigateTransactionsMonth(${currentYear}, ${currentMonth}, 'prev')">
                         <i class="fas fa-chevron-left me-2"></i>Mes Anterior
                     </button>
                     
-                    <span class="flex-grow-1 mx-3">
+                    <span class="flex-grow-1 mx-3 text-center my-2 my-md-0">
                         <i class="fas fa-list text-primary me-2"></i>
                         Transacciones de ${getMonthName(currentMonth)} ${currentYear}
                     </span>
                     
-                    <button class="btn btn-outline-primary" onclick="navigateTransactionsMonth(${currentYear}, ${currentMonth}, 'next')">
+                    <button class="btn btn-outline-primary mt-2 mt-md-0" onclick="navigateTransactionsMonth(${currentYear}, ${currentMonth}, 'next')">
                         Mes Siguiente<i class="fas fa-chevron-right ms-2"></i>
                     </button>
                 </div>
                 
-                <p class="text-muted mt-2 clickable-date" onclick="showTransactionsMonthSelector(${currentYear}, ${currentMonth})">
+                <p class="text-muted mt-2 clickable-date text-center" onclick="showTransactionsMonthSelector(${currentYear}, ${currentMonth})">
                     <i class="far fa-calendar-alt me-1"></i>
                     Del ${getFirstDayOfMonth(currentYear, currentMonth)} al ${getLastDayOfMonth(currentYear, currentMonth)}
                     <small class="ms-1 text-primary">
@@ -3424,7 +2994,7 @@ async function loadAllTransactions(year = null, month = null) {
                 <div class="text-center py-5">
                     <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
                     <p class="text-muted">No hay transacciones para ${getMonthName(currentMonth)} ${currentYear}</p>
-                    <div class="d-flex justify-content-center gap-2">
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
                         <button class="btn btn-primary" onclick="showAddTransaction()">
                             <i class="fas fa-plus me-2"></i>Agregar transacción
                         </button>
@@ -3438,8 +3008,8 @@ async function loadAllTransactions(year = null, month = null) {
         }
 
         let transactionsHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+                <h5 class="mb-2 mb-md-0">
                     <i class="fas fa-receipt me-2"></i>
                     ${transactions.length} transacción${transactions.length !== 1 ? 'es' : ''} encontrada${transactions.length !== 1 ? 's' : ''}
                 </h5>
@@ -3450,16 +3020,17 @@ async function loadAllTransactions(year = null, month = null) {
                 </div>
             </div>
             
+            <!-- Tabla responsive -->
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover table-striped">
+                    <thead class="table-light">
                         <tr>
-                            <th>Fecha</th>
-                            <th>Categoría</th>
-                            <th>Descripción</th>
-                            <th>Tipo</th>
-                            <th class="text-end">Monto</th>
-                            <th class="text-center">Acciones</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col">Descripción</th>
+                            <th scope="col">Tipo</th>
+                            <th scope="col" class="text-end">Monto</th>
+                            <th scope="col" class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -3482,26 +3053,28 @@ async function loadAllTransactions(year = null, month = null) {
             
             transactionsHTML += `
                 <tr>
-                    <td>${formattedDate}</td>
-                    <td>
+                    <td data-label="Fecha">${formattedDate}</td>
+                    <td data-label="Categoría">
                         <span class="badge bg-light text-dark">${transaction.category}</span>
                     </td>
-                    <td>${transaction.description || '-'}</td>
-                    <td>
+                    <td data-label="Descripción" class="text-truncate" style="max-width: 200px;">${transaction.description || '-'}</td>
+                    <td data-label="Tipo">
                         <span class="badge ${isIncome ? 'bg-success' : 'bg-danger'}">
                             ${isIncome ? 'Ingreso' : 'Gasto'}
                         </span>
                     </td>
-                    <td class="text-end ${isIncome ? 'text-success' : 'text-danger'}">
+                    <td data-label="Monto" class="text-end ${isIncome ? 'text-success' : 'text-danger'}">
                         <strong>${isIncome ? '+' : '-'}$${transaction.amount.toFixed(2)}</strong>
                     </td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editTransaction('${transaction.id}')" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTransaction('${transaction.id}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                    <td data-label="Acciones" class="text-center">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editTransaction('${transaction.id}')" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTransaction('${transaction.id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -3514,10 +3087,10 @@ async function loadAllTransactions(year = null, month = null) {
                 </table>
             </div>
             
-            <!-- Resumen del mes -->
+            <!-- Resumen del mes - Responsive -->
             <div class="row mt-4">
-                <div class="col-md-4">
-                    <div class="card bg-success bg-opacity-10">
+                <div class="col-sm-4 mb-3">
+                    <div class="card bg-success bg-opacity-10 h-100">
                         <div class="card-body text-center">
                             <h6 class="card-title text-success">
                                 <i class="fas fa-arrow-down me-2"></i>Total Ingresos
@@ -3526,8 +3099,8 @@ async function loadAllTransactions(year = null, month = null) {
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card bg-danger bg-opacity-10">
+                <div class="col-sm-4 mb-3">
+                    <div class="card bg-danger bg-opacity-10 h-100">
                         <div class="card-body text-center">
                             <h6 class="card-title text-danger">
                                 <i class="fas fa-arrow-up me-2"></i>Total Gastos
@@ -3536,8 +3109,8 @@ async function loadAllTransactions(year = null, month = null) {
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card ${balance >= 0 ? 'bg-primary bg-opacity-10' : 'bg-warning bg-opacity-10'}">
+                <div class="col-sm-4 mb-3">
+                    <div class="card ${balance >= 0 ? 'bg-primary bg-opacity-10' : 'bg-warning bg-opacity-10'} h-100">
                         <div class="card-body text-center">
                             <h6 class="card-title ${balance >= 0 ? 'text-primary' : 'text-warning'}">
                                 <i class="fas fa-balance-scale me-2"></i>Balance
@@ -3582,6 +3155,9 @@ async function loadAllTransactions(year = null, month = null) {
         }
     }
 }
+
+
+
 
 // Navegar al mes anterior o siguiente en transacciones
 function navigateTransactionsMonth(currentYear, currentMonth, direction) {
