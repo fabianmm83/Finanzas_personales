@@ -3258,20 +3258,22 @@ function goToSelectedTransactionsMonth() {
 }
 
 // Función para exportar transacciones a CSV
-function exportTransactionsToCSV(year, month) {
+async function exportTransactionsToCSV(year, month) {
     try {
-        // Esta función necesitaría implementarse completamente
-        // Por ahora mostramos un mensaje
-        showToast(`Función de exportación para ${getMonthName(month)} ${year} en desarrollo`, 'info');
         console.log(`📊 Exportando transacciones de ${getMonthName(month)} ${year} a CSV`);
         
-        // Aquí iría la lógica para generar y descargar el CSV
-        // const csvContent = generateCSVContent(transactions);
-        // downloadCSV(csvContent, `transacciones-${getMonthName(month)}-${year}.csv`);
+        // Verificar que reportsManager esté disponible
+        if (typeof window.reportsManager === 'undefined') {
+            showToast('Error: Módulo de reportes no disponible', 'danger');
+            return;
+        }
+        
+        // Llamar al método optimizado de reportsManager
+        await window.reportsManager.exportTransactionsToCSV(year, month);
         
     } catch (error) {
         console.error('Error exporting transactions:', error);
-        showToast('Error al exportar transacciones', 'danger');
+        showToast('Error al exportar transacciones: ' + error.message, 'danger');
     }
 }
 
