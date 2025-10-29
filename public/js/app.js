@@ -659,10 +659,6 @@ async function initializeManagers() {
 
 
 
-
-
-
-
 // MODIFICAR initializeApp() para usar la nueva función
 async function initializeApp() {
     showLoading(true);
@@ -3113,9 +3109,6 @@ async function loadAllTransactions(year = null, month = null) {
                 <p class="text-muted">
                     Mostrando ${transactions.length} transacción${transactions.length !== 1 ? 'es' : ''} de ${getMonthName(currentMonth)} ${currentYear}
                 </p>
-                <button class="btn btn-outline-secondary" onclick="loadAllTransactions(${now.getFullYear()}, ${now.getMonth() + 1})">
-                    <i class="fas fa-calendar me-2"></i>Volver al mes actual
-                </button>
             </div>
         `;
         
