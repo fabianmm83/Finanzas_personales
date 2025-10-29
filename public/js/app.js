@@ -2912,14 +2912,7 @@ function showAllTransactions() {
                     <i class="fas fa-list text-primary me-2"></i>
                     Todas las Transacciones
                 </h2>
-                <div>
-                    <button class="btn btn-secondary me-2" onclick="loadDashboard(auth.currentUser)">
-                        <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
-                    </button>
-                    <button class="btn btn-primary" onclick="showAddTransaction()">
-                        <i class="fas fa-plus me-1"></i> Nueva Transacción
-                    </button>
-                </div>
+               
             </div>
 
             <div class="row">
@@ -2994,14 +2987,7 @@ async function loadAllTransactions(year = null, month = null) {
                 <div class="text-center py-5">
                     <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
                     <p class="text-muted">No hay transacciones para ${getMonthName(currentMonth)} ${currentYear}</p>
-                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-2">
-                        <button class="btn btn-primary" onclick="showAddTransaction()">
-                            <i class="fas fa-plus me-2"></i>Agregar transacción
-                        </button>
-                        <button class="btn btn-outline-secondary" onclick="loadAllTransactions(${now.getFullYear()}, ${now.getMonth() + 1})">
-                            <i class="fas fa-calendar me-2"></i>Volver al mes actual
-                        </button>
-                    </div>
+                    
                 </div>
             `;
             return;
