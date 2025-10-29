@@ -3257,7 +3257,7 @@ function goToSelectedTransactionsMonth() {
     loadAllTransactions(year, month);
 }
 
-// Función para exportar transacciones a CSV
+// Función para exportar transacciones a CSV - VERSIÓN CORREGIDA
 async function exportTransactionsToCSV(year, month) {
     try {
         console.log(`📊 Exportando transacciones de ${getMonthName(month)} ${year} a CSV`);
@@ -3265,11 +3265,28 @@ async function exportTransactionsToCSV(year, month) {
         // Verificar que reportsManager esté disponible
         if (typeof window.reportsManager === 'undefined') {
             showToast('Error: Módulo de reportes no disponible', 'danger');
+            console.error('❌ reportsManager no está disponible');
             return;
         }
         
-        // Llamar al método optimizado de reportsManager
-        await window.reportsManager.exportTransactionsToCSV(year, month);
+        // Mostrar loading
+        showToast(`Generando CSV para ${getMonthName(month)} ${year}...`, 'info');
+        
+        // Obtener las transacciones actuales del contexto
+        const currentTransactions = await transactionManager.getTransactions({ 
+            month: month, 
+            year: year 
+        });
+        
+        if (!currentTransactions || currentTransactions.length === 0) {
+            showToast('No hay transacciones para exportar', 'warning');
+            return;
+        }
+        
+        console.log(`✅ Transacciones obtenidas: ${currentTransactions.length}`);
+        
+        // Llamar al método optimizado de reportsManager con las transacciones
+        await window.reportsManager.exportTransactionsToCSV(year, month, currentTransactions);
         
     } catch (error) {
         console.error('Error exporting transactions:', error);

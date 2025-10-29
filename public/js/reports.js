@@ -84,92 +84,90 @@ class ReportsManager {
     }
 
     generateTransactionsCSV(transactions, year, month) {
-        const headers = [
-            `REPORTE DE TRANSACCIONES - ${this.getMonthName(month).toUpperCase()} ${year}`,
-            `Generado: ${new Date().toLocaleDateString('es-ES', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            })}`,
-            `Total de transacciones: ${transactions.length}`,
-            ''
-        ];
+    const headers = [
+        `REPORTE DE TRANSACCIONES - ${this.getMonthName(month).toUpperCase()} ${year}`,
+        `Generado: ${new Date().toLocaleDateString('es-ES', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}`,
+        `Total de transacciones: ${transactions.length}`,
+        ''
+    ];
 
-        // Encabezados de columnas
-        const columnHeaders = [
-            'FECHA,TIPO,CATEGORÍA,DESCRIPCIÓN,MONTO,ESTADO,CUENTA,NOTAS'
-        ];
+    // Encabezados de columnas
+    const columnHeaders = [
+        'FECHA,TIPO,CATEGORÍA,DESCRIPCIÓN,MONTO,ESTADO'
+    ];
 
-        // Resumen por categorías (se calculará mientras procesamos las transacciones)
-        const categorySummary = {};
-        let totalIncome = 0;
-        let totalExpenses = 0;
+    // Resumen por categorías
+    const categorySummary = {};
+    let totalIncome = 0;
+    let totalExpenses = 0;
 
-        // Procesar cada transacción
-        const transactionLines = transactions.map(transaction => {
-            const date = new Date(transaction.date).toLocaleDateString('es-ES');
-            const type = transaction.type || 'N/A';
-            const category = transaction.category || 'Sin categoría';
-            const description = transaction.description || '';
-            const amount = this.formatCurrencyForCSV(transaction.amount || 0);
-            const status = transaction.status || 'Completado';
-            const account = transaction.account || 'N/A';
-            const notes = (transaction.notes || '').replace(/,/g, ';'); // Evitar comas en notas
+    // Procesar cada transacción
+    const transactionLines = transactions.map(transaction => {
+        const date = new Date(transaction.date).toLocaleDateString('es-ES');
+        const type = transaction.type === 'income' ? 'INGRESO' : 'GASTO';
+        const category = transaction.category || 'Sin categoría';
+        const description = (transaction.description || '').replace(/,/g, ';'); // Evitar comas
+        const amount = this.formatCurrencyForCSV(transaction.amount || 0);
+        const status = 'COMPLETADO';
 
-            // Calcular resumen por categoría
-            if (!categorySummary[category]) {
-                categorySummary[category] = { income: 0, expenses: 0 };
-            }
-            
-            if (type.toLowerCase() === 'ingreso') {
-                categorySummary[category].income += parseFloat(transaction.amount || 0);
-                totalIncome += parseFloat(transaction.amount || 0);
-            } else {
-                categorySummary[category].expenses += parseFloat(transaction.amount || 0);
-                totalExpenses += parseFloat(transaction.amount || 0);
-            }
+        // Calcular resumen por categoría
+        if (!categorySummary[category]) {
+            categorySummary[category] = { income: 0, expenses: 0 };
+        }
+        
+        if (transaction.type === 'income') {
+            categorySummary[category].income += parseFloat(transaction.amount || 0);
+            totalIncome += parseFloat(transaction.amount || 0);
+        } else {
+            categorySummary[category].expenses += parseFloat(transaction.amount || 0);
+            totalExpenses += parseFloat(transaction.amount || 0);
+        }
 
-            return `${date},${type},${category},${description},${amount},${status},${account},${notes}`;
-        });
+        return `${date},${type},${category},${description},${amount},${status}`;
+    });
 
-        // Sección de resumen
-        const summarySection = [
-            '',
-            '=== RESUMEN DEL MES ===',
-            `Total Ingresos: ${this.formatCurrencyForCSV(totalIncome)}`,
-            `Total Gastos: ${this.formatCurrencyForCSV(totalExpenses)}`,
-            `Balance Neto: ${this.formatCurrencyForCSV(totalIncome - totalExpenses)}`,
-            ''
-        ];
+    // Sección de resumen
+    const summarySection = [
+        '',
+        '=== RESUMEN DEL MES ===',
+        `Total Ingresos,${this.formatCurrencyForCSV(totalIncome)}`,
+        `Total Gastos,${this.formatCurrencyForCSV(totalExpenses)}`,
+        `Balance Neto,${this.formatCurrencyForCSV(totalIncome - totalExpenses)}`,
+        ''
+    ];
 
-        // Resumen por categorías
-        const categorySection = [
-            '=== RESUMEN POR CATEGORÍA ===',
-            'Categoría,Ingresos,Gastos,Total'
-        ];
+    // Resumen por categorías
+    const categorySection = [
+        '=== RESUMEN POR CATEGORÍA ===',
+        'Categoría,Ingresos,Gastos,Total'
+    ];
 
-        Object.entries(categorySummary).forEach(([category, amounts]) => {
-            const total = amounts.income - amounts.expenses;
-            categorySection.push(
-                `${category},${this.formatCurrencyForCSV(amounts.income)},${this.formatCurrencyForCSV(amounts.expenses)},${this.formatCurrencyForCSV(total)}`
-            );
-        });
+    Object.entries(categorySummary).forEach(([category, amounts]) => {
+        const total = amounts.income - amounts.expenses;
+        categorySection.push(
+            `${category},${this.formatCurrencyForCSV(amounts.income)},${this.formatCurrencyForCSV(amounts.expenses)},${this.formatCurrencyForCSV(total)}`
+        );
+    });
 
-        // Combinar todas las secciones
-        const csvLines = [
-            ...headers,
-            ...summarySection,
-            ...categorySection,
-            '',
-            '=== DETALLE DE TRANSACCIONES ===',
-            ...columnHeaders,
-            ...transactionLines
-        ];
+    // Combinar todas las secciones
+    const csvLines = [
+        ...headers,
+        ...summarySection,
+        ...categorySection,
+        '',
+        '=== DETALLE DE TRANSACCIONES ===',
+        ...columnHeaders,
+        ...transactionLines
+    ];
 
-        return csvLines.join('\n');
-    }
+    return csvLines.join('\n');
+}
 
     formatCurrencyForCSV(amount) {
         // Para CSV, usar formato numérico simple sin símbolos
